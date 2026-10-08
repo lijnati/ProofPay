@@ -1,33 +1,36 @@
 # ProofPay — Tasks
 
-Internal deadline: **Oct 10 2026, 5:00 PM EAT**. Plan: `~/.claude/plans/pasted-content-id-3adc-proofpay-twinkling-metcalfe.md`.
+Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to Vercel.
 
 ## P0
-- [x] 1. Scaffold: Next 16.4, Tailwind 4, TS, vitest, zod, ai 7, git init
-- [x] 2. Domain types and synthetic fixtures (3 suppliers, 6 samples)
-- [x] 3. Engine (TDD): normalize, evidence grounding, signals, verify. Mutation-checked: disabling the account rule fails 3 tests; disabling grounding fails 5.
-- [x] 4. AI adapter (`Extractor` interface; AI SDK 7 `Output.object` through the AI Gateway)
-- [x] 5. `/api/verify` handler with input validation and route tests using mocked faithful, malicious, and failing extractors
-- [x] 6. Labeled offline replay for bundled samples only (user text → 502, never fabricated)
-- [x] 7. Result UI: verdict, evidence table, findings with observed vs trusted, payment gate, checks
-- [x] 8. Input UI: samples, textarea, sender field, char limit, empty/loading/error states
-- [x] 9. `/suppliers` registry page; responsive check at 390px
-- [x] 10. Quality gates and browser QA (local production build)
-- [ ] 11. **Live model run** (`pnpm eval`): BLOCKED on AI credentials
-- [ ] 12. **Deploy to Vercel** and verify A/B/C/E on the production URL: BLOCKED on credentials and deploy approval
+- [x] M1 Foundation and engine: scaffold, git (local only), fixtures, Zod contracts, normalization, grounding, rules, verdict
+- [x] M1 CTO corrections:
+  - supplier identity by unique name/alias only; ambiguous → REVIEW
+  - sender is a claimed identity; missing sender → REVIEW
+  - decimal-string money, exact minor-unit comparison
+  - whole-token grounding for accounts, names, emails
+  - beneficiary must match a labeled payee
+  - AI-independent account cross-check
+- [x] M2 AI integration:
+  - `generateText` + `Output.object` (signature verified against installed ai@7.0.130)
+  - no forced temperature; bounded schema retry; 45s timeout
+  - content-free error logging
+  - explicit-sample-only replay labeled "Offline replay — stored reference extraction, not live AI"
+- [x] M3 UI: console, samples, loading/error states, verdict, evidence table, findings with request-vs-trusted, simulated gate, registry
+- [x] M4 Tests: 80 passing, no network. Scenarios A–F, identity conflict, ambiguous/unknown supplier, ungrounded output, appended-digit account, truncated beneficiary, extended email domain, multiple accounts, malicious model, injection-obedient model, decimals, replay rules
+- [x] M5 Browser QA (local production build): A/B/C/D/E verified; REVIEW gate approve flow; error state for arbitrary text; 375px layout, no horizontal overflow (nav wrap fixed)
+- [ ] M6 **Deploy**: BLOCKED. The Vercel CLI needs a one-time login by the user (`! npx vercel login`). The MCP API would require inlining every source file.
+- [ ] **Live AI run** (`pnpm eval`): BLOCKED. No AI Gateway credentials locally (the gateway returns HTTP 403). It may work via OIDC once deployed, if the team has AI Gateway access.
 
-## P1 (after P0 is deployed)
+## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
-- [ ] Larger labeled eval suite, with results only from real runs
+- [ ] Larger labeled eval suite, with results from real runs only
 - [ ] Highlight excerpt locations in the source text
-- [ ] Copy-report button, small polish
-
-## Blockers
-- No AI provider key on this machine. Need `AI_GATEWAY_API_KEY` (or OIDC via Vercel deployment).
-- Deployment: Vercel MCP is authenticated (team `lijnatis-projects`). **No GitHub**, per the user: deploy directly via Vercel (MCP or CLI). Waiting on approval to create the project and deploy.
+- [ ] Copy-report button
 
 ## Verification log
-- 2026-10-08: `pnpm lint` clean · `pnpm typecheck` clean · `pnpm test` 61/61 passed · `pnpm build` succeeded
-- 2026-10-08: `scripts/smoke.ts` against local `next start`: all 6 samples returned the expected verdict, **replay mode** (no key). Non-sample text → 502 EXTRACTION_FAILED as designed.
-- 2026-10-08: Browser QA (Chrome, local production build): Demos A (NO_MISMATCH_FOUND), B (HOLD), and E (HOLD + injection) rendered correctly; mobile at 390px has no horizontal overflow; `/suppliers` OK; no console errors.
-- Live-model extraction: **not yet run**.
+- 2026-10-08: `pnpm lint` clean · `pnpm exec tsc --noEmit` clean · `pnpm test` **80/80** · `pnpm build` OK
+- 2026-10-08: Mutation checks: disabling the account rule fails 3 tests; disabling grounding fails 5; disabling the AI-independent account cross-check fails the injection-obedient-model test
+- 2026-10-08: `scripts/smoke.ts` on local `next start`: 6/6 expected verdicts in **replay** mode; arbitrary text → 502 EXTRACTION_FAILED; server log shows only `GatewayInternalServerError (HTTP 403)`, no request content
+- 2026-10-08: Browser QA screenshots taken (Chrome, local production build)
+- Live-model extraction: **never run so far**. No live accuracy claims.
