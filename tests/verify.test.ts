@@ -113,6 +113,7 @@ describe("adversarial and edge cases", () => {
     raw.senderEmail = { status: "missing", value: null, excerpt: null };
     const r = run(raw, legit.text);
     expect(codes(r.findings)).toContain("SENDER_NOT_PROVIDED");
+    expect(r.verdict).toBe("REVIEW");
     expect(r.checksNotPerformed.join(" ")).toMatch(/sender/i);
   });
 
@@ -201,5 +202,92 @@ describe("decideVerdict", () => {
   it("info only → no mismatch found", () => {
     expect(decideVerdict([f("info"), f("info")])).toBe("NO_MISMATCH_FOUND");
     expect(decideVerdict([])).toBe("NO_MISMATCH_FOUND");
+  });
+});
+
+describe("CTO policy corrections", () => {
+  const legit = sample("legit-northwind");
+
+  it("a registered sender domain alone does not identify the supplier", () => {
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.supplierName = { status: "missing", value: null, excerpt: null };
+    const r = run(raw, legit.text);
+    expect(r.matchedSupplier).toBeNull();
+    expect(codes(r.findings)).toContain("UNKNOWN_SUPPLIER");
+    expect(r.verdict).toBe("REVIEW");
+  });
+
+  it("an ambiguous supplier name is never silently resolved", () => {
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.supplierName = { status: "ambiguous", value: null, excerpt: null };
+    expect(run(raw, legit.text).verdict).toBe("REVIEW");
+  });
+
+  it("a name matching multiple trusted records → review, no comparison", () => {
+    const clash = [
+      ...TRUSTED_SUPPLIERS,
+      { ...TRUSTED_SUPPLIERS[0], id: "sup_clash", legalName: "Northwind Holdings", aliases: ["Northwind"] },
+    ];
+    const text = `${legit.text}\n\nNorthwind`;
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.supplierName = { status: "found", value: "Northwind", excerpt: "Northwind" };
+    const r = verifyRequest({ extraction: groundExtraction(raw, text), source: text, registry: clash });
+    expect(codes(r.findings)).toContain("AMBIGUOUS_SUPPLIER");
+    expect(r.matchedSupplier).toBeNull();
+    expect(r.verdict).toBe("REVIEW");
+  });
+
+  it("appended digits do not let a model ground the trusted account", () => {
+    const text = legit.text.replace("GB82 WEST 1234 5698 7654 32", "GB82 WEST 1234 5698 7654 3299");
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.accountIdentifier = { status: "found", value: "GB82 WEST 1234 5698 7654 32", excerpt: "IBAN: GB82 WEST 1234 5698 7654 32" };
+    expect(run(raw, text).verdict).not.toBe("NO_MISMATCH_FOUND");
+  });
+
+  it("a truncated beneficiary name cannot ground as the trusted beneficiary", () => {
+    const text = legit.text.replace("Beneficiary: Northwind Packaging Ltd", "Beneficiary: Northwind Packaging Ltd Holdings");
+    expect(run(legit.fallbackExtraction, text).verdict).not.toBe("NO_MISMATCH_FOUND");
+  });
+
+  it("an extended sender domain cannot ground as the trusted domain", () => {
+    const text = legit.text.replace("<accounts@northwind-packaging.example>", "<accounts@northwind-packaging.example.mailer.example>");
+    expect(run(legit.fallbackExtraction, text).verdict).not.toBe("NO_MISMATCH_FOUND");
+  });
+
+  it("an unusual amount is informational only", () => {
+    const text = legit.text.replace("GBP 4,860.00", "GBP 94,860.00");
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.amount = { status: "found", value: "94860.00", excerpt: "Amount due: GBP 94,860.00" };
+    raw.currency = { status: "found", value: "GBP", excerpt: "Amount due: GBP 94,860.00" };
+    const r = run(raw, text);
+    expect(r.findings.find((f) => f.code === "AMOUNT_OUTSIDE_TYPICAL")?.severity).toBe("info");
+    expect(r.verdict).toBe("NO_MISMATCH_FOUND");
+  });
+
+  it("an unusual amount cannot soften a critical mismatch", () => {
+    const s = sample("substituted-account");
+    const r = run(s.fallbackExtraction, s.text);
+    expect(codes(r.findings)).toContain("AMOUNT_OUTSIDE_TYPICAL");
+    expect(r.verdict).toBe("HOLD");
+  });
+
+  it("NO_MISMATCH_FOUND requires name match, matching sender, grounded matching account and beneficiary", () => {
+    const r = run(legit.fallbackExtraction, legit.text);
+    expect(r.verdict).toBe("NO_MISMATCH_FOUND");
+    expect(r.matchBasis).toBe("name+domain");
+    for (const f of ["accountIdentifier", "beneficiaryName"] as const) {
+      expect(r.comparisons.find((c) => c.field === f)?.status).toBe("match");
+    }
+  });
+});
+
+describe("beneficiary grounding", () => {
+  const legit = sample("legit-northwind");
+  it("a model cannot cite the signature line as the beneficiary when a different payee is labeled", () => {
+    const text = legit.text.replace("Beneficiary: Northwind Packaging Ltd", "Beneficiary: NW Packaging Trading");
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.beneficiaryName = { status: "found", value: "Northwind Packaging Ltd", excerpt: "Accounts Receivable, Northwind Packaging Ltd" };
+    const r = run(raw, text);
+    expect(r.verdict).not.toBe("NO_MISMATCH_FOUND");
   });
 });

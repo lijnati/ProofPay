@@ -61,6 +61,14 @@ export const detectInjection = (source: string) => scan(source, INJECTION_PATTER
 export const detectPaymentChange = (source: string) => scan(source, PAYMENT_CHANGE_PATTERNS);
 export const detectUrgency = (source: string) => scan(source, URGENCY_PATTERNS);
 
+const BENEFICIARY_LABEL_RE =
+  /^[ \t>*-]*(?:beneficiary(?:\s+name)?|account\s+name|account\s+holder(?:\s+name)?|payee(?:\s+name)?|pay\s+to|remit\s+to|in\s+favou?r\s+of)[ \t]*[:\-][ \t]*(\S.*?)[ \t]*$/gim;
+
+/** Values the request explicitly labels as the payee ("Beneficiary: …", "Account name: …"). */
+export function findLabeledBeneficiaries(source: string): string[] {
+  return [...source.replace(/\r\n/g, "\n").matchAll(BENEFICIARY_LABEL_RE)].map((m) => m[1]);
+}
+
 const IBAN_RE = /\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\b/g;
 const KEYWORD_ACCOUNT_RE =
   /\b(?:iban|account(?:\s+(?:number|no\.?|#))?|acct\.?(?:\s*no\.?)?|a\/c)\s*[:#]?\s*([A-Z0-9][A-Z0-9 \t-]{5,40})/gi;
@@ -71,13 +79,23 @@ const KEYWORD_ACCOUNT_RE =
  * destinations, independent of the model.
  */
 export function findAccountCandidates(source: string): string[] {
-  const found = new Set<string>();
-  for (const m of source.matchAll(IBAN_RE)) found.add(normalizeAccount(m[0]));
+  return findAccountMentions(source).map((m) => m.value);
+}
+
+/** Account-like identifiers with the source line each was found on. */
+export function findAccountMentions(source: string): { value: string; line: string }[] {
+  const found = new Map<string, string>();
+  for (const m of source.matchAll(IBAN_RE)) {
+    const n = normalizeAccount(m[0]);
+    if (!found.has(n)) found.set(n, lineFor(source, m.index));
+  }
   for (const m of source.matchAll(KEYWORD_ACCOUNT_RE)) {
     const n = normalizeAccount(m[1]);
-    if ((n.match(/\d/g) ?? []).length >= 6) found.add(n);
+    if ((n.match(/\d/g) ?? []).length >= 6 && !found.has(n)) found.set(n, lineFor(source, m.index));
   }
   // Drop candidates that are substrings of another (same account captured twice).
-  const list = [...found];
-  return list.filter((a) => !list.some((b) => b !== a && b.includes(a)));
+  const list = [...found.keys()];
+  return list
+    .filter((a) => !list.some((b) => b !== a && b.includes(a)))
+    .map((value) => ({ value, line: found.get(value)! }));
 }

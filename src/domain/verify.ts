@@ -1,6 +1,7 @@
 import {
   extractDomain,
   formatAmount,
+  toMinorUnits,
   isLookalikeDomain,
   normalizeAccount,
   normalizeCompanyName,
@@ -68,18 +69,24 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
   const add = (f: Finding) => findings.push(f);
 
   // ---- Identity -----------------------------------------------------------
+  // Policy: supplier identity is established ONLY by a unique match of the
+  // stated supplier name against registered names/aliases. A sender domain is
+  // a claimed identity (pasted text is not authenticated), so it can confirm
+  // or contradict a name match but never establish one on its own.
   const senderDomain = usable(x.senderEmail) ? extractDomain(x.senderEmail.value) : null;
-  const byName = usable(x.supplierName)
-    ? registry.find((s) => nameMatches(x.supplierName.value!, [s.legalName, ...s.aliases]))
-    : undefined;
-  const byDomain = senderDomain ? registry.find((s) => s.senderDomains.includes(senderDomain)) : undefined;
-
-  const supplier = byName ?? byDomain ?? null;
-  const matchBasis: VerificationResult["matchBasis"] =
-    byName && byDomain && byName === byDomain ? "name+domain" : byName ? "name" : byDomain ? "domain" : null;
+  const nameCandidates = usable(x.supplierName)
+    ? registry.filter((s) => nameMatches(x.supplierName.value!, [s.legalName, ...s.aliases]))
+    : [];
+  const supplier = nameCandidates.length === 1 ? nameCandidates[0] : null;
+  const domainOwner = senderDomain ? registry.find((s) => s.senderDomains.includes(senderDomain)) ?? null : null;
+  const matchBasis: VerificationResult["matchBasis"] = supplier
+    ? domainOwner === supplier
+      ? "name+domain"
+      : "name"
+    : null;
 
   const senderObserved = observe(x.senderEmail);
-  const identityConflict = !!(byName && byDomain && byName !== byDomain);
+  const identityConflict = !!(supplier && domainOwner && domainOwner !== supplier);
 
   if (identityConflict) {
     add({
@@ -87,39 +94,56 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
       severity: "critical",
       field: "senderEmail",
       title: "Sender belongs to a different supplier",
-      explanation: `The request names ${byName!.legalName}, but the sender domain ${senderDomain} is registered to ${byDomain!.legalName}. One supplier's mailbox should not be requesting payment for another.`,
+      explanation: `The request names ${supplier!.legalName}, but the sender domain ${senderDomain} is registered to ${domainOwner!.legalName}. One supplier's mailbox should not be requesting payment for another.`,
       observed: senderObserved,
-      expected: expectFrom(byName!, byName!.senderDomains.join(", ")),
+      expected: expectFrom(supplier!, supplier!.senderDomains.join(", ")),
     });
   }
 
-  if (!supplier) {
+  if (nameCandidates.length > 1) {
+    add({
+      code: "AMBIGUOUS_SUPPLIER",
+      severity: "warning",
+      field: "supplierName",
+      title: "Supplier matches more than one trusted record",
+      explanation: `“${x.supplierName.value}” matches ${nameCandidates.map((s) => s.legalName).join(" and ")}. ProofPay will not guess which record to compare against.`,
+      observed: observe(x.supplierName),
+      expected: null,
+    });
+    notPerformed.push("Payment account and beneficiary — supplier could not be identified uniquely");
+  } else if (!supplier) {
+    const reason =
+      x.supplierName.status === "ambiguous"
+        ? "The request names the supplier inconsistently, so it cannot be matched to a trusted record."
+        : usable(x.supplierName)
+          ? `“${x.supplierName.value}” is not in your trusted supplier registry, so there are no previously verified payment details to compare against. Verify the supplier through an independent channel before paying.`
+          : "The request does not clearly name a supplier, so there are no previously verified payment details to compare against.";
     add({
       code: "UNKNOWN_SUPPLIER",
       severity: "warning",
       field: "supplierName",
       title: "No trusted record for this supplier",
-      explanation: usable(x.supplierName)
-        ? `“${x.supplierName.value}” is not in your trusted supplier registry, so there are no previously verified payment details to compare against. Verify the supplier through an independent channel before paying.`
-        : "The request does not clearly identify a supplier in your registry, so there are no previously verified payment details to compare against.",
+      explanation:
+        domainOwner && !usable(x.supplierName)
+          ? `${reason} The sender domain is registered to ${domainOwner.legalName}, but a claimed sender address alone is not enough to identify a supplier.`
+          : reason,
       observed: observe(x.supplierName),
       expected: null,
     });
     notPerformed.push("Payment account and beneficiary — no trusted record exists to compare against");
   } else {
-    performed.push(
-      `Supplier identity matched to trusted record “${supplier.legalName}” by ${matchBasis === "name+domain" ? "name and sender domain" : matchBasis === "name" ? "name" : "sender domain"}`,
-    );
+    performed.push(`Supplier identified as trusted record “${supplier.legalName}” by registered name`);
   }
 
-  // ---- Sender domain ------------------------------------------------------
+  // ---- Sender domain (claimed identity, not authentication) ---------------
   if (!usable(x.senderEmail)) {
     add({
       code: "SENDER_NOT_PROVIDED",
-      severity: "info",
+      severity: "warning",
       field: "senderEmail",
-      title: "No sender address available",
-      explanation: "The request did not include a sender address, so the sender domain could not be compared with trusted records.",
+      title: "No sender address to check",
+      explanation:
+        "The request does not include a sender address, so the sender could not be compared with the registered domain. A person should confirm who sent it.",
       observed: null,
       expected: supplier ? expectFrom(supplier, supplier.senderDomains.join(", ")) : null,
     });
@@ -140,7 +164,7 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
       s.senderDomains.some((d) => d !== senderDomain && isLookalikeDomain(senderDomain, d)),
     );
     if (supplier && supplier.senderDomains.includes(senderDomain)) {
-      performed.push(`Sender domain ${senderDomain} matches the registered domain`);
+      performed.push(`Claimed sender domain ${senderDomain} matches the registered domain (not authenticated)`);
     } else if (imitated) {
       const trusted = imitated.senderDomains.join(", ");
       add({
@@ -217,6 +241,29 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
       performed.push("Payment account compared with the registered account");
     }
 
+    // Model-independent cross-check: if the request text itself contains account
+    // identifiers and none is the registered account, that is a mismatch no
+    // matter what the model reported (or failed to report).
+    const trustedAccount = normalizeAccount(supplier.account.value);
+    const inText = findAccountCandidates(source);
+    if (
+      inText.length > 0 &&
+      !inText.includes(trustedAccount) &&
+      !findings.some((f) => f.code === "ACCOUNT_MISMATCH")
+    ) {
+      const line = lineContaining(source, inText[0]);
+      add({
+        code: "ACCOUNT_MISMATCH",
+        severity: "critical",
+        field: "accountIdentifier",
+        title: "Payment account differs from the registered account",
+        explanation: `The request text contains the account ${inText.join(", ")}, which is not the account on file for ${supplier.legalName} (${supplier.account.value}). This was found by a deterministic scan of the text, independent of the AI extraction. It is a mismatch, not proof of fraud — confirm by calling the supplier on a number you already have.`,
+        observed: { value: inText[0], excerpt: line, origin: "request_text" },
+        expected: expectFrom(supplier, supplier.account.value),
+      });
+    }
+    if (inText.length > 0) performed.push("Account identifiers in the text cross-checked without AI");
+
     if (usable(x.beneficiaryName)) {
       if (!nameMatches(x.beneficiaryName.value, [supplier.beneficiaryName, ...supplier.beneficiaryAliases])) {
         add({
@@ -258,7 +305,8 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
 
     if (usable(x.amount)) {
       const { min, max } = supplier.typicalAmount;
-      if (x.amount.value < min || x.amount.value > max) {
+      const v = toMinorUnits(x.amount.value);
+      if (v < toMinorUnits(min) || v > toMinorUnits(max)) {
         add({
           code: "AMOUNT_OUTSIDE_TYPICAL",
           severity: "info",
@@ -335,10 +383,15 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
     matchedSupplier: supplier,
     matchBasis,
     findings: sortFindings(findings),
-    comparisons: buildComparisons(x, supplier, findings, matchBasis),
+    comparisons: buildComparisons(x, supplier, findings),
     checksPerformed: performed,
     checksNotPerformed: notPerformed,
   };
+}
+
+function lineContaining(source: string, normalizedAccount: string): string | null {
+  const line = source.split(/\r?\n/).find((l) => normalizeAccount(l).includes(normalizedAccount));
+  return line?.trim() ?? null;
 }
 
 function unique(items: string[]): string[] {
@@ -353,6 +406,7 @@ const CODE_PRIORITY: Finding["code"][] = [
   "IDENTITY_CONFLICT",
   "SENDER_DOMAIN_LOOKALIKE",
   "UNKNOWN_SUPPLIER",
+  "AMBIGUOUS_SUPPLIER",
   "MISSING_CRITICAL_FIELD",
   "UNGROUNDED_EXTRACTION",
   "PAYMENT_CHANGE_LANGUAGE",
@@ -376,7 +430,6 @@ function buildComparisons(
   x: GroundedExtraction,
   supplier: TrustedSupplier | null,
   findings: Finding[],
-  matchBasis: VerificationResult["matchBasis"],
 ): ComparisonRow[] {
   const flagged = (field: FieldKey, severities: Finding["severity"][] = ["critical", "warning"]) =>
     findings.some((f) => f.field === field && severities.includes(f.severity) && f.code !== "MULTIPLE_ACCOUNTS");
@@ -400,20 +453,19 @@ function buildComparisons(
     return (
       ["supplierName", "senderEmail", "beneficiaryName", "accountIdentifier", "bankName", "amount", "invoiceId"] as FieldKey[]
     ).map((k) => {
-      const r = row(k, null, k === "amount" ? ((v: number) => formatAmount(v, currency)) as never : undefined);
+      const r = row(k, null, k === "amount" ? ((v: string) => formatAmount(v, currency)) as never : undefined);
       if (k === "senderEmail" && flagged("senderEmail", ["critical"])) r.status = "mismatch";
       return r;
     });
   }
 
   const supplierRow = row("supplierName", expectFrom(supplier, supplier.legalName));
-  if (supplierRow.observed && matchBasis === "domain") supplierRow.status = "not_compared";
   if (findings.some((f) => f.code === "IDENTITY_CONFLICT")) supplierRow.status = "mismatch";
 
   const amountRow = row(
     "amount",
     expectFrom(supplier, `${formatAmount(supplier.typicalAmount.min, supplier.currency)} – ${formatAmount(supplier.typicalAmount.max, null)} typical`),
-    ((v: number) => formatAmount(v, currency)) as never,
+    ((v: string) => formatAmount(v, currency)) as never,
   );
   if (amountRow.status === "match" && flagged("amount", ["info"])) amountRow.status = "note";
 
