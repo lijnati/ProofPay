@@ -47,6 +47,10 @@ export function createLlmExtractor(model = process.env.PROOFPAY_MODEL || DEFAULT
 /** Safe, content-free description (never includes prompt or request text). */
 function describeError(error: unknown): string {
   if (!(error instanceof Error)) return "Unknown extraction error";
-  const status = (error as { statusCode?: number }).statusCode;
-  return `${error.name}${status ? ` (HTTP ${status})` : ""}`;
+  const describe = (e: Error) => {
+    const status = (e as { statusCode?: number }).statusCode;
+    return `${e.name}${status ? ` (HTTP ${status})` : ""}`;
+  };
+  const last = (error as { lastError?: unknown }).lastError;
+  return last instanceof Error ? `${describe(error)} ← ${describe(last)}` : describe(error);
 }

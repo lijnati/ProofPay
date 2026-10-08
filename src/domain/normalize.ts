@@ -187,6 +187,18 @@ export function containsWholePhrase(text: string, value: string): boolean {
   return re.test(text.normalize("NFKC").replace(/\r\n/g, "\n"));
 }
 
+/** True when the words of `name` (legal suffixes ignored) appear consecutively, with word boundaries. */
+export function containsWords(text: string, name: string): boolean {
+  const tokens = normalizeCompanyName(name).split(" ").filter(Boolean);
+  if (!tokens.length) return false;
+  // Not inside an email address, domain, or URL (e.g. "@northwind-packaging.example").
+  const re = new RegExp(
+    `(?<![\\p{L}\\p{N}@./_-])${tokens.map(escapeRe).join("[ \\t,.&]{1,3}")}(?![\\p{L}\\p{N}])(?![.@_-][\\p{L}\\p{N}])`,
+    "iu",
+  );
+  return re.test(text.normalize("NFKC"));
+}
+
 /** True when `email` appears in `text` as a complete address (domain not extended). */
 export function containsWholeEmail(text: string, email: string): boolean {
   const re = new RegExp(`(?<![A-Za-z0-9._%+\\-])${escapeRe(email.trim())}(?![A-Za-z0-9\\-]|\\.[A-Za-z0-9])`, "i");

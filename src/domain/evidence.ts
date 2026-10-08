@@ -73,9 +73,10 @@ function supportedValue(value: string, excerpt: string, kind: Kind, source: stri
       if (!a || !alnum(excerpt).includes(a)) return null;
       if (!excerptLines(source, excerpt).some((line) => containsWholePhrase(line, v))) return null;
       if (kind === "beneficiary") {
-        // If the request labels a payee, the extracted beneficiary must be exactly one of those labels.
+        // The beneficiary must be exactly a value the request labels as payee
+        // ("Beneficiary:", "Account name:", "Pay to:", …). Never inferred from a signature.
         const labeled = findLabeledBeneficiaries(source);
-        if (labeled.length && !labeled.some((l) => alnum(l) === a)) return null;
+        if (!labeled.some((l) => alnum(l) === a)) return null;
       }
       return v;
     }
