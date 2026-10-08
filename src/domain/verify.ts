@@ -1,5 +1,6 @@
 import {
   containsWholePhrase,
+  containsWords,
   extractDomain,
   formatAmount,
   toMinorUnits,
@@ -7,7 +8,13 @@ import {
   normalizeAccount,
   normalizeCompanyName,
 } from "./normalize";
-import { detectInjection, detectPaymentChange, detectUrgency, findAccountCandidates } from "./signals";
+import {
+  detectInjection,
+  detectPaymentChange,
+  detectUrgency,
+  findAccountCandidates,
+  findHeaderSenderDomains,
+} from "./signals";
 import {
   FIELD_LABELS,
   type ComparisonRow,
@@ -83,7 +90,13 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
   const byModel = usable(x.supplierName)
     ? registry.filter((s) => nameMatches(x.supplierName.value!, [s.legalName, ...s.aliases]))
     : [];
-  const byText = registry.filter((s) => [s.legalName, ...s.aliases].some((n) => containsWholePhrase(source, n)));
+  // Multi-word registered names count anywhere as whole words; single-word
+  // aliases only as complete segments (too easy to collide in running text).
+  const byText = registry.filter((s) =>
+    [s.legalName, ...s.aliases].some((n) =>
+      normalizeCompanyName(n).includes(" ") ? containsWords(source, n) : containsWholePhrase(source, n),
+    ),
+  );
   const nameCandidates = [...new Set([...byModel, ...byText])];
   const supplier = nameCandidates.length === 1 ? nameCandidates[0] : null;
   const domainOwner = senderDomain ? registry.find((s) => s.senderDomains.includes(senderDomain)) ?? null : null;
@@ -211,6 +224,36 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
     }
   }
 
+  // ---- Manually entered sender vs. the document's own header --------------
+  if (x.senderEmail.origin === "sender_field" && senderDomain) {
+    const docDomains = findHeaderSenderDomains(source).filter((d) => d !== senderDomain);
+    if (docDomains.length) {
+      add({
+        code: "SENDER_CONFLICT",
+        severity: "warning",
+        field: "senderEmail",
+        title: "Entered sender contradicts the request's own sender line",
+        explanation: `You entered ${senderDomain}, but the request text says it was sent from ${docDomains.join(", ")}. Neither is authenticated; a person should confirm who actually sent it.`,
+        observed: senderObserved,
+        expected: null,
+      });
+      for (const d of docDomains) {
+        const imitated = registry.find((s) => s.senderDomains.some((t) => t !== d && isLookalikeDomain(d, t)));
+        if (imitated && !findings.some((f) => f.code === "SENDER_DOMAIN_LOOKALIKE")) {
+          add({
+            code: "SENDER_DOMAIN_LOOKALIKE",
+            severity: "critical",
+            field: "senderEmail",
+            title: "Sender domain imitates a registered domain",
+            explanation: `The request's sender line uses ${d}, which closely resembles ${imitated.senderDomains.join(", ")}, the registered domain for ${imitated.legalName}, but is a different domain.`,
+            observed: { value: d, excerpt: lineContainingText(source, d), origin: "request_text" },
+            expected: expectFrom(imitated, imitated.senderDomains.join(", ")),
+          });
+        }
+      }
+    }
+  }
+
   // ---- Grounding failures & missing critical fields -----------------------
   for (const key of Object.keys(FIELD_LABELS) as FieldKey[]) {
     const field = x[key];
@@ -263,20 +306,22 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
     // identifiers and none is the registered account, that is a mismatch no
     // matter what the model reported (or failed to report).
     const trustedAccount = normalizeAccount(supplier.account.value);
+    // Any unregistered destination offered in the text is a mismatch, even when
+    // the registered account also appears (e.g. as a decoy in a footer).
     const inText = findAccountCandidates(source);
-    if (
-      inText.length > 0 &&
-      !inText.includes(trustedAccount) &&
-      !findings.some((f) => f.code === "ACCOUNT_MISMATCH")
-    ) {
-      const line = lineContaining(source, inText[0]);
+    const unregistered = inText.filter((a) => a !== trustedAccount);
+    if (unregistered.length > 0 && !findings.some((f) => f.code === "ACCOUNT_MISMATCH")) {
+      const line = lineContaining(source, unregistered[0]);
+      const alsoTrusted = inText.includes(trustedAccount);
       add({
         code: "ACCOUNT_MISMATCH",
         severity: "critical",
         field: "accountIdentifier",
-        title: "Payment account differs from the registered account",
-        explanation: `The request text contains the account ${inText.join(", ")}, which is not the account on file for ${supplier.legalName} (${supplier.account.value}). This was found by a deterministic scan of the text, independent of the AI extraction. It is a mismatch, not proof of fraud — confirm by calling the supplier on a number you already have.`,
-        observed: { value: inText[0], excerpt: line, origin: "request_text" },
+        title: alsoTrusted
+          ? "Request includes an account that is not the registered account"
+          : "Payment account differs from the registered account",
+        explanation: `The request text contains the account ${unregistered.join(", ")}, which is not the account on file for ${supplier.legalName} (${supplier.account.value}).${alsoTrusted ? " The registered account also appears, so the request offers more than one destination." : ""} This was found by a deterministic scan of the text, independent of the AI extraction. It is a mismatch, not proof of fraud — confirm by calling the supplier on a number you already have.`,
+        observed: { value: unregistered[0], excerpt: line, origin: "request_text" },
         expected: expectFrom(supplier, supplier.account.value),
       });
     }
@@ -412,6 +457,11 @@ function lineContaining(source: string, normalizedAccount: string): string | nul
   return line?.trim() ?? null;
 }
 
+function lineContainingText(source: string, needle: string): string | null {
+  const line = source.split(/\r?\n/).find((l) => l.toLowerCase().includes(needle.toLowerCase()));
+  return line?.trim() ?? null;
+}
+
 function unique(items: string[]): string[] {
   return [...new Set(items)];
 }
@@ -423,6 +473,7 @@ const CODE_PRIORITY: Finding["code"][] = [
   "BENEFICIARY_MISMATCH",
   "IDENTITY_CONFLICT",
   "SENDER_DOMAIN_LOOKALIKE",
+  "SENDER_CONFLICT",
   "UNKNOWN_SUPPLIER",
   "AMBIGUOUS_SUPPLIER",
   "MISSING_CRITICAL_FIELD",

@@ -1,8 +1,9 @@
-import type { Extractor } from "@/ai/extractor";
+import { ExtractionError, type Extractor } from "@/ai/extractor";
 import { groundExtraction } from "@/domain/evidence";
 import { extractDomain } from "@/domain/normalize";
 import {
   MAX_REQUEST_CHARS,
+  RawExtractionSchema,
   VerifyRequestSchema,
   type GroundedExtraction,
   type RawExtraction,
@@ -42,7 +43,8 @@ const normText = (s: string) => s.replace(/\r\n/g, "\n").trim();
  * POST handler factory. Nothing is persisted and request text is never logged:
  * it lives only in memory for the duration of this call.
  */
-export function createVerifyHandler(extractor: Extractor) {
+export function createVerifyHandler(extractor: Extractor, opts: { timeoutMs?: number } = {}) {
+  const timeoutMs = opts.timeoutMs ?? EXTRACTION_TIMEOUT_MS;
   return async function POST(req: Request): Promise<Response> {
     let body: unknown;
     try {
@@ -69,10 +71,11 @@ export function createVerifyHandler(extractor: Extractor) {
     let raw: RawExtraction;
     let mode: ExtractionMode = "live";
     try {
-      raw = await extractor.extract(text, AbortSignal.timeout(EXTRACTION_TIMEOUT_MS));
+      // Never trust the adapter: re-validate whatever it returns.
+      raw = RawExtractionSchema.parse(await extractor.extract(text, AbortSignal.timeout(timeoutMs)));
     } catch (err) {
       // Log only a content-free reason — never the request text or provider payloads.
-      console.error(`[verify] live extraction failed: ${err instanceof Error ? err.message : "unknown"}`);
+      console.error(`[verify] live extraction failed: ${err instanceof ExtractionError ? err.message : err instanceof Error ? err.name : "unknown"}`);
       if (!replayEligible) {
         return error(
           "EXTRACTION_FAILED",

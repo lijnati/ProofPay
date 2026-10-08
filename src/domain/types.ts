@@ -140,7 +140,8 @@ export type FindingCode =
   | "URGENCY_LANGUAGE"
   | "SENDER_NOT_PROVIDED"
   | "AMOUNT_OUTSIDE_TYPICAL"
-  | "AMBIGUOUS_SUPPLIER";
+  | "AMBIGUOUS_SUPPLIER"
+  | "SENDER_CONFLICT";
 
 export interface Observed {
   value: string;

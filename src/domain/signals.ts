@@ -17,6 +17,9 @@ const INJECTION_PATTERNS: RegExp[] = [
   /\bwithout\s+(?:flagging|being\s+flagged|verification|further\s+checks)\b/i,
   /\bdo\s+not\s+(?:flag|report|mention|alert|escalate|hold)\b/i,
   /\byou\s+are\s+(?:an?\s+|the\s+)?(?:ai|assistant|language\s+model|model|chatbot)\b/i,
+  /\bsystem\s+override\b/i,
+  /\bskip\s+(?:all\s+|any\s+|the\s+)?(?:checks|verification|validation|review)\b/i,
+  /\b(?:verdict|risk[_\s]?score|status)\s*[:=]\s*(?:no_mismatch|approved|verified|safe|clean)/i,
 ];
 
 const PAYMENT_CHANGE_PATTERNS: RegExp[] = [
@@ -60,6 +63,15 @@ function scan(source: string, patterns: RegExp[]): string[] {
 export const detectInjection = (source: string) => scan(source, INJECTION_PATTERNS);
 export const detectPaymentChange = (source: string) => scan(source, PAYMENT_CHANGE_PATTERNS);
 export const detectUrgency = (source: string) => scan(source, URGENCY_PATTERNS);
+
+/** Domains of addresses on "From:" / "Sender:" / "Reply-To:" header lines in the text. */
+export function findHeaderSenderDomains(source: string): string[] {
+  const out = new Set<string>();
+  for (const m of source.matchAll(/^[ \t>]*(?:from|sender|reply-to)[ \t]*:[^\n]*?([A-Za-z0-9._%+\-]+@([A-Za-z0-9À-￿.\-]+\.[A-Za-zÀ-￿]{2,}))/gim)) {
+    out.add(m[2].toLowerCase());
+  }
+  return [...out];
+}
 
 const BENEFICIARY_LABEL_RE =
   /^[ \t>*-]*(?:beneficiary(?:\s+name)?|account\s+name|account\s+holder(?:\s+name)?|payee(?:\s+name)?|pay\s+to|remit\s+to|in\s+favou?r\s+of)[ \t]*[:\-][ \t]*(\S.*?)[ \t]*$/gim;
