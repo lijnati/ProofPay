@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 256" width="920" height="256">
+    <rect fill="#000" x="62" y="40" width="42" height="176" rx="21"/>
+  <path fill="#000" d="M118 40h20a56 56 0 0 1 0 112h-20Z"/>
+  <text x="282" y="170" font-family="Segoe UI, Inter, Arial, sans-serif" font-size="118" font-weight="600" letter-spacing="-3" fill="#000">ProofPay</text>
+</svg>

@@ -20,11 +20,10 @@ export default function OpengraphImage() {
           fontFamily: "Georgia, serif",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 18, fontFamily: "sans-serif", fontSize: 30, fontWeight: 600 }}>
-          <svg width="52" height="52" viewBox="0 0 32 32">
-            <rect width="32" height="32" rx="7" fill="#17181a" />
-            <path d="M9 13h14M9 19h14" stroke="#ffffff" strokeWidth="2.6" strokeLinecap="round" />
-            <path d="M19.5 8.5 12.5 23.5" stroke="#e0705f" strokeWidth="2.6" strokeLinecap="round" />
+        <div style={{ display: "flex", alignItems: "center", gap: 18, fontFamily: "sans-serif", fontSize: 34, fontWeight: 600, letterSpacing: -1 }}>
+          <svg width="56" height="56" viewBox="0 0 256 256">
+            <path fill="#17181a" d="M28 122A88 88 0 0 1 204 122Z" />
+            <path fill="#a8322a" d="M52 134A88 88 0 0 0 228 134Z" />
           </svg>
           ProofPay
         </div>

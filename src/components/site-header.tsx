@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { IconArrow, IconGitHub, Logo } from "./icons";
+import { IconArrow, IconGitHub, LogoLockup } from "./icons";
 import { SITE } from "@/site";
 
 /** One header for the whole site; the marketing and product variants differ only in links. */
@@ -7,9 +7,8 @@ export function SiteHeader({ variant }: { variant: "marketing" | "product" }) {
   return (
     <header className="sticky top-0 z-30 border-b border-line/80 bg-canvas/85 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 sm:gap-6 sm:px-6">
-        <Link href="/" className="flex shrink-0 items-center gap-2 rounded-md font-semibold tracking-tight" aria-label="ProofPay home">
-          <Logo className="size-6" />
-          <span className="text-[15px]">ProofPay</span>
+        <Link href="/" className="shrink-0 rounded-md" aria-label="ProofPay home">
+          <LogoLockup />
         </Link>
 
         {variant === "marketing" ? (
@@ -31,7 +30,7 @@ export function SiteHeader({ variant }: { variant: "marketing" | "product" }) {
               )}
               <Link
                 href="/app"
-                className="group inline-flex h-9 items-center gap-1.5 rounded-md bg-ink px-3.5 text-[13px] font-medium text-white transition-colors hover:bg-ink-2"
+                className="group inline-flex h-9 items-center gap-1.5 rounded-full bg-ink px-4 text-[13px] font-medium text-white transition-colors hover:bg-ink-2"
               >
                 Launch Demo
                 <IconArrow className="size-3.5 transition-transform group-hover:translate-x-0.5" />

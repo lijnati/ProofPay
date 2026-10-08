@@ -3,13 +3,37 @@ import type { SVGProps } from "react";
 type P = SVGProps<SVGSVGElement>;
 const base = { fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", viewBox: "0 0 24 24" } as const;
 
-/** Brand mark: "≠" — the request does not equal the record. */
-export const Logo = (p: P) => (
-  <svg viewBox="0 0 32 32" aria-hidden {...p}>
-    <rect width="32" height="32" rx="7" fill="#17181a" />
-    <path d="M9 13h14M9 19h14" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-    <path d="M19.5 8.5 12.5 23.5" stroke="#e0705f" strokeWidth="2.6" strokeLinecap="round" />
-  </svg>
+/**
+ * Brand mark: one disc split in two, the halves no longer line up — the mismatch.
+ * Geometry from submission-assets/logo/build_logo.py. `small` is the cut for ≤ 32px
+ * (wider gap and offset); `reversed` is for dark backgrounds.
+ */
+export const Logo = ({ small = true, reversed = false, ...p }: P & { small?: boolean; reversed?: boolean }) => {
+  const top = reversed ? "#ffffff" : "#17181a";
+  const bottom = reversed ? "#e0705f" : "#a8322a";
+  return (
+    <svg viewBox="0 0 256 256" aria-hidden {...p}>
+      {small ? (
+        <>
+          <path fill={top} d="M24 116A86 86 0 0 1 196 116Z" />
+          <path fill={bottom} d="M60 140A86 86 0 0 0 232 140Z" />
+        </>
+      ) : (
+        <>
+          <path fill={top} d="M28 122A88 88 0 0 1 204 122Z" />
+          <path fill={bottom} d="M52 134A88 88 0 0 0 228 134Z" />
+        </>
+      )}
+    </svg>
+  );
+};
+
+/** Lockup: mark + wordmark set in Geist SemiBold (the outlined master lives in submission-assets/logo). */
+export const LogoLockup = ({ reversed = false, className = "" }: { reversed?: boolean; className?: string }) => (
+  <span className={`inline-flex items-center gap-2 text-[16px] font-semibold tracking-[-0.025em] ${reversed ? "text-white" : "text-ink"} ${className}`}>
+    <Logo reversed={reversed} className="size-[22px]" />
+    ProofPay
+  </span>
 );
 export const IconGitHub = (p: P) => (
   <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...p}>
