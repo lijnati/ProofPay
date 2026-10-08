@@ -1,3 +1,5 @@
+<img src="submission-assets/logo/proofpay-lockup.svg" alt="ProofPay" height="44">
+
 # ProofPay
 
 **Scammers can fake an invoice. ProofPay checks what they can't fake: your previously verified payment records.**
