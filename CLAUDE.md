@@ -41,7 +41,7 @@ pnpm lint
 pnpm build
 pnpm eval         # LIVE model run over samples; needs AI_GATEWAY_API_KEY. Report only real output.
 ```
-Env: `AI_GATEWAY_API_KEY` (local; OIDC on Vercel), optional `PROOFPAY_MODEL` (default `anthropic/claude-sonnet-5.5`).
+Env: `AI_GATEWAY_API_KEY` (local; OIDC on Vercel), optional `PROOFPAY_MODEL` (default `openai/gpt-5-mini`).
 
 ## Working rules
 - Logic changes: write or extend tests in `tests/` first, and watch them fail where practical.

@@ -75,7 +75,7 @@ pnpm dev
 | Variable | Purpose |
 |---|---|
 | `AI_GATEWAY_API_KEY` | Vercel AI Gateway key for local live extraction. On Vercel, OIDC is used automatically. |
-| `PROOFPAY_MODEL` | Optional. Gateway model id; default `anthropic/claude-sonnet-5.5`. |
+| `PROOFPAY_MODEL` | Optional. Gateway model id; default `openai/gpt-5-mini`. |
 
 Without credentials, the app still works for the six bundled samples through a clearly labeled **offline replay**. The replay uses stored reference extractions and is shown as "Offline replay — stored reference extraction, not live AI". It applies only when a sample is explicitly selected and left unedited. Arbitrary input with no available model gets an honest error, never a substitute result.
 
