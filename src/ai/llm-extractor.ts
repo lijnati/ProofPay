@@ -11,7 +11,7 @@ import { buildExtractionPrompt, EXTRACTION_SYSTEM_PROMPT } from "./prompt";
  * No sampling parameters are forced (some models reject them); determinism
  * comes from the schema + grounding, not temperature.
  */
-export const DEFAULT_MODEL = "anthropic/claude-sonnet-5.5";
+export const DEFAULT_MODEL = "openai/gpt-5-mini";
 
 /** Attempts when the model returns output that fails the schema. Transport retries are separate (maxRetries). */
 const SCHEMA_ATTEMPTS = 2;

@@ -9,7 +9,7 @@ Rules:
 4. If a value is not stated, use status "missing" with value null and excerpt null. Never guess, infer, complete, or invent values (e.g. do not infer a sender, bank, or account that is not written).
 5. If the request states conflicting values for the same field (e.g. two different accounts or amounts), use status "ambiguous" with value null and quote one of the conflicting passages as the excerpt.
 6. Field guidance:
-   - supplierName: the company requesting payment (who the invoice is from), as written.
+   - supplierName: the company name of the business requesting payment, as written in the body, signature, or letterhead (e.g. "Northwind Packaging Ltd"). Not an email display name like "Accounts" or "Acme Billing" when the full company name is written elsewhere. Use "ambiguous" only if the request genuinely claims to come from two different companies; a payee/beneficiary name that differs from the company name does NOT make the supplier ambiguous (record it under beneficiaryName).
    - senderEmail: the sender's email address only if a From/sender line or signature states one.
    - amount: the amount due as a plain number without separators or currency (e.g. 4860.00 → 4860).
    - currency: ISO 4217 code (GBP, USD, EUR, KES …). Only "found" if a code or unambiguous symbol is written.

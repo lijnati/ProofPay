@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "next typegen && tsc --noEmit",
-    "eval": "tsx scripts/eval.ts",
+    "eval": "tsx --env-file-if-exists=.env.local scripts/eval.ts",
     "smoke": "tsx scripts/smoke.ts"
   },
   "dependencies": {
