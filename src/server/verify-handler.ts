@@ -9,30 +9,38 @@ import {
   type VerificationResult,
 } from "@/domain/types";
 import { verifyRequest } from "@/domain/verify";
-import { findSampleByText } from "@/fixtures/samples";
+import { SAMPLES } from "@/fixtures/samples";
 import { TRUSTED_SUPPLIERS } from "@/fixtures/suppliers";
 
 export type ExtractionMode = "live" | "replay";
 
+export const REPLAY_LABEL = "Offline replay — stored reference extraction, not live AI";
+
 export interface VerifyResponse {
   requestId: string;
   extractionMode: ExtractionMode;
+  /** Model id for live extraction; null for replay. */
   model: string | null;
+  /** Human-readable label for the extraction source. */
+  extractionLabel: string;
   extraction: GroundedExtraction;
   result: VerificationResult;
 }
 
 export type VerifyErrorCode = "INVALID_BODY" | "EMPTY_INPUT" | "TOO_LONG" | "INVALID_SENDER" | "EXTRACTION_FAILED";
 
-const EXTRACTION_TIMEOUT_MS = 30_000;
+const EXTRACTION_TIMEOUT_MS = 45_000;
+const NO_STORE = { "Cache-Control": "no-store" };
 
 function error(code: VerifyErrorCode, status: number, message: string) {
-  return Response.json({ error: code, message }, { status, headers: { "Cache-Control": "no-store" } });
+  return Response.json({ error: code, message }, { status, headers: NO_STORE });
 }
 
+const normText = (s: string) => s.replace(/\r\n/g, "\n").trim();
+
 /**
- * POST handler factory. Nothing is persisted: the request text lives only in
- * memory for the duration of this call.
+ * POST handler factory. Nothing is persisted and request text is never logged:
+ * it lives only in memory for the duration of this call.
  */
 export function createVerifyHandler(extractor: Extractor) {
   return async function POST(req: Request): Promise<Response> {
@@ -53,18 +61,26 @@ export function createVerifyHandler(extractor: Extractor) {
     const sender = parsed.data.senderEmail?.trim() || undefined;
     if (sender && !extractDomain(sender)) return error("INVALID_SENDER", 400, "Sender must be an email address.");
 
+    // Replay is only possible for an explicitly selected synthetic sample whose
+    // text is unmodified. Arbitrary input never gets a stored extraction.
+    const sample = parsed.data.sampleId ? SAMPLES.find((s) => s.id === parsed.data.sampleId) : undefined;
+    const replayEligible = !!sample && !sender && normText(sample.text) === normText(text);
+
     let raw: RawExtraction;
     let mode: ExtractionMode = "live";
     try {
       raw = await extractor.extract(text, AbortSignal.timeout(EXTRACTION_TIMEOUT_MS));
     } catch (err) {
-      console.error("[verify] extraction failed:", err instanceof Error ? (err.cause ?? err.message) : err);
-      // Labeled offline replay only for the bundled synthetic samples.
-      const sample = findSampleByText(text);
-      if (!sample) {
-        return error("EXTRACTION_FAILED", 502, "The extraction service is unavailable. Nothing was approved — try again.");
+      // Log only a content-free reason — never the request text or provider payloads.
+      console.error(`[verify] live extraction failed: ${err instanceof Error ? err.message : "unknown"}`);
+      if (!replayEligible) {
+        return error(
+          "EXTRACTION_FAILED",
+          502,
+          "The AI extraction service is unavailable. Nothing was verified or approved — try again.",
+        );
       }
-      raw = sample.fallbackExtraction;
+      raw = sample!.fallbackExtraction;
       mode = "replay";
     }
 
@@ -75,9 +91,10 @@ export function createVerifyHandler(extractor: Extractor) {
       requestId: crypto.randomUUID(),
       extractionMode: mode,
       model: mode === "live" ? extractor.name : null,
+      extractionLabel: mode === "live" ? `Live AI extraction · ${extractor.name}` : REPLAY_LABEL,
       extraction,
       result,
     };
-    return Response.json(payload, { headers: { "Cache-Control": "no-store" } });
+    return Response.json(payload, { headers: NO_STORE });
   };
 }

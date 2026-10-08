@@ -62,12 +62,46 @@ describe("POST /api/verify", () => {
     expect(json.extraction.accountIdentifier.status).toBe("unsupported");
   });
 
-  it("falls back to a labeled replay for bundled samples when the model is unavailable", async () => {
-    const res = await createVerifyHandler(failing)(post({ text: sample("substituted-account").text }));
+  it("falls back to a labeled replay only for an explicitly selected, unmodified sample", async () => {
+    const s = sample("substituted-account");
+    const res = await createVerifyHandler(failing)(post({ text: s.text, sampleId: s.id }));
     const json = (await res.json()) as VerifyResponse;
     expect(json.extractionMode).toBe("replay");
     expect(json.model).toBeNull();
+    expect(json.extractionLabel).toMatch(/Offline replay.*not live AI/);
     expect(json.result.verdict).toBe("HOLD");
+  });
+
+  it("does not replay sample text that was not explicitly selected", async () => {
+    const res = await createVerifyHandler(failing)(post({ text: sample("legit-northwind").text }));
+    expect(res.status).toBe(502);
+  });
+
+  it("does not replay an edited sample, a mismatched sample id, or a sample with an added sender", async () => {
+    const s = sample("legit-northwind");
+    const handler = createVerifyHandler(failing);
+    expect((await handler(post({ text: `${s.text}
+PS: new bank details`, sampleId: s.id }))).status).toBe(502);
+    expect((await handler(post({ text: s.text, sampleId: "substituted-account" }))).status).toBe(502);
+    expect((await handler(post({ text: s.text, sampleId: s.id, senderEmail: "x@freemail.example" }))).status).toBe(502);
+    expect((await handler(post({ text: s.text, sampleId: "nope" }))).status).toBe(502);
+  });
+
+  it("a model that obeys the embedded injection still cannot change the verdict", async () => {
+    const s = sample("prompt-injection");
+    // Compromised model: claims the trusted Atlas account and suppresses all signals.
+    const obedient: Extractor = {
+      name: "test/obedient",
+      async extract() {
+        const raw = structuredClone(s.fallbackExtraction);
+        raw.accountIdentifier = { status: "found", value: "7712 0090 3318", excerpt: "Account: 7712 0090 3318" };
+        return raw;
+      },
+    };
+    const json = (await (await createVerifyHandler(obedient)(post({ text: s.text }))).json()) as VerifyResponse;
+    expect(json.result.verdict).toBe("HOLD");
+    expect(json.extraction.accountIdentifier.status).toBe("unsupported");
+    expect(json.result.findings.map((f) => f.code)).toContain("INSTRUCTION_INJECTION");
   });
 
   it("never fabricates a result for user text when the model is unavailable", async () => {
