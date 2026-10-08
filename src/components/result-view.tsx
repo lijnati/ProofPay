@@ -162,9 +162,10 @@ function KeyEvidence({ data }: { data: VerifyResponse }) {
       ? findings.find((f) => f.code === "MISSING_CRITICAL_FIELD" && f.field === "accountIdentifier")
       : undefined;
   const item = top
-    ? { title: top.title, observed: top.observed!, expected: top.expected!, match: false }
+    ? { field: top.field, title: top.title, observed: top.observed!, expected: top.expected!, match: false }
     : missingAccount
       ? {
+          field: "accountIdentifier",
           title: "No payment account in this request",
           observed: { value: "Not stated", excerpt: null, origin: "request_text" as const },
           expected: accountRow!.expected!,
@@ -172,13 +173,14 @@ function KeyEvidence({ data }: { data: VerifyResponse }) {
         }
       : noRecord
       ? {
+          field: noRecord.field,
           title: noRecord.title,
           observed: noRecord.observed!,
           expected: { value: "No record", source: "This supplier is not in your trusted supplier registry, so nothing can be verified." },
           match: false,
         }
     : verdict === "NO_MISMATCH_FOUND" && accountRow?.observed && accountRow.expected
-      ? { title: "Payment account matches the registered account", observed: accountRow.observed, expected: accountRow.expected, match: true }
+      ? { field: "accountIdentifier", title: "Payment account matches the registered account", observed: accountRow.observed, expected: accountRow.expected, match: true }
       : null;
   if (!item) return null;
   return (
@@ -190,7 +192,7 @@ function KeyEvidence({ data }: { data: VerifyResponse }) {
         <div className="min-w-0 px-4 py-3">
           <p className="text-[10px] uppercase tracking-wider text-ink-4">This request</p>
           <p className={`mt-1 break-words font-mono text-[15px] font-medium ${item.match ? "text-ink" : "text-hold"}`}>
-            {item.observed.value}
+            {showValue(item.field, item.observed.value)}
           </p>
           {item.observed.excerpt && (
             <p className="mt-1 break-words text-[11px] leading-snug text-ink-3">Quoted: “{item.observed.excerpt}”</p>
@@ -211,6 +213,13 @@ function KeyEvidence({ data }: { data: VerifyResponse }) {
       </div>
     </div>
   );
+}
+
+/** Display-only grouping for account identifiers (comparison logic is unaffected). */
+function showValue(field: string, value: string): string {
+  if (field !== "accountIdentifier") return value;
+  const compact = value.replace(/[s-]/g, "");
+  return /^[A-Za-z0-9]{9,}$/.test(compact) && !/s/.test(value) ? compact.replace(/(.{4})(?=.)/g, "$1 ") : value;
 }
 
 function Meta({ label, children }: { label: string; children: React.ReactNode }) {
@@ -279,7 +288,7 @@ function EvidenceTable({ rows, supplier }: { rows: ComparisonRow[]; supplier: Tr
               {r.observed ? (
                 <>
                   <p className={`break-words font-mono text-[13px] ${r.status === "mismatch" ? "text-hold" : "text-ink"}`}>
-                    {r.observed.value}
+                    {showValue(r.field, r.observed.value)}
                   </p>
                   <Provenance excerpt={r.observed.excerpt} origin={r.observed.origin} />
                 </>
