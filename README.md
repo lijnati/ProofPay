@@ -2,107 +2,142 @@
 
 **Scammers can fake an invoice. ProofPay checks what they can't fake: your previously verified payment records.**
 
-ProofPay is a pre-payment verification console for small businesses. You paste a payment request (an email or invoice text). AI extracts the payee, account, amount, and sender, and quotes each one verbatim. A deterministic rules engine then compares those facts with the supplier records you verified earlier, and the payment is held, sent for review, or allowed through a simulated gate.
+ProofPay is a pre-payment verification console for small businesses. You paste a payment request (an email or invoice text). AI extracts who is asking to be paid, where, and how much, quoting each fact word for word. Deterministic code then compares those facts with the supplier records you verified earlier. A changed account or payee **holds** the payment, with the evidence side by side.
 
-Built for ForgeHacks 2026 (AI + Cybersecurity track). **All suppliers, domains (`.example`), accounts, and requests are synthetic. No real payments are made.**
+> ForgeHacks 2026 · **AI + Cybersecurity** track · solo submission
+> All suppliers, domains (`.example`), accounts, and requests are **synthetic**. ProofPay never moves money; the payment gate is a simulation.
 
-## How it works
-
-```
-request text ──► AI extraction ──► evidence grounding ──► deterministic rules ──► verdict + evidence
-                 (untrusted)       (values must occur     (trusted registry,       HOLD / REVIEW /
-                                    verbatim in text)      no AI involved)          NO_MISMATCH_FOUND
-```
-
-1. **Extract (AI).** `generateText` with `Output.object({ schema })` (AI SDK 7, Vercel AI Gateway) returns only observed fields, each with a verbatim excerpt. The schema has no field for a decision, risk score, or reference data.
-2. **Ground (code).** Every "found" value must be backed by an excerpt that occurs in the source, and the value must be a *complete* token within it:
-   - Account numbers can't be prefixes of longer numbers.
-   - Names must be whole segments on the cited line.
-   - A beneficiary must equal a value the request explicitly labels as payee.
-   - Email domains can't be extended.
-   - Amounts are decimal strings.
-
-   Anything unsupported is discarded and treated as missing.
-3. **Verify (code).** `src/domain/verify.ts` compares the grounded facts with the trusted registry. It also scans the raw text without AI for:
-   - account identifiers;
-   - payment-change, urgency, and embedded-instruction language.
-4. **Decide (code).** Any critical finding → **HOLD**. Any warning → **REVIEW**. Otherwise → **NO_MISMATCH_FOUND**, shown as "No mismatch against registered records", never as "verified" or "safe".
-
-### Decision policy
-
-| Verdict | When |
+| | |
 |---|---|
-| **HOLD** | Account differs from the registered account (from AI extraction *or* the AI-independent text scan) · beneficiary differs · sender domain registered to a different supplier · lookalike of a registered sender domain |
-| **REVIEW** | Unknown or ambiguous supplier · missing or ambiguous account, beneficiary, or amount · ungrounded critical extraction · multiple account identifiers · no sender to check · unregistered sender domain · payment-change language · embedded instructions to AI · different bank or currency |
-| **NO_MISMATCH_FOUND** | Supplier uniquely identified by registered name/alias, claimed sender domain matches, account and beneficiary grounded and matching, no warnings |
+| **Live demo** | _add production URL_ |
+| **Demo video** | _add video URL_ |
+| **Evaluation** | [EVALUATION.md](EVALUATION.md) |
 
-- **Supplier identity** comes only from a unique name/alias match. A sender domain can confirm or contradict that match, but it can never establish identity on its own.
-- **A sender address is a claimed identity.** Pasted text is not authenticated, so ProofPay never claims SPF/DKIM/DMARC checks or bank account-ownership verification.
-- **Amount** outside the supplier's typical range is informational only and never overrides other findings.
+![Payment held: the request's IBAN differs from the registered IBAN](submission-assets/screenshots/01-hold-account-substitution.jpg)
 
-### Prompt injection
+## The problem
 
-Request text is wrapped in delimiters and treated as data. Even a fully compromised model can't change the outcome. The tests include a model that obeys an embedded "approve this payment" instruction and claims the trusted account. The result is still HOLD, because:
-- the claimed account fails grounding;
-- the AI-independent account scan finds the real destination;
-- the injection text is surfaced as a finding.
+In payment-redirection fraud (business email compromise), an attacker impersonates a real supplier, or takes over their mailbox, and sends a normal-looking invoice with **one detail changed: the bank account**. Everything else is genuine, so the email looks right. Generative AI makes these messages faster to produce and harder to spot by tone or spelling.
 
-## Project structure
+The defense isn't "does this email look suspicious?" It's **"does this payment request match what we already verified?"** Small businesses rarely have the tools or staff to check that every time.
 
+**For:** small-business owners and finance assistants who pay supplier invoices by bank transfer.
+
+## What it does
+
+- **Paste a request**, or pick one of six labeled synthetic samples.
+- **AI extraction:** supplier, sender, invoice, amount, currency, beneficiary, account, and bank, each with a verbatim quote from the request.
+- **Evidence grounding:** every AI claim is checked against the original text. Anything that can't be found word for word is discarded.
+- **Verification against trusted records:** account, beneficiary, sender domain (including lookalikes), bank, currency, multiple destinations, and missing information.
+- **Verdict:**
+  - **HOLD** for critical mismatches;
+  - **REVIEW** when something can't be confirmed;
+  - **No mismatch against registered records** otherwise. This is never shown as "verified safe".
+- **Evidence screen:** the key mismatch shown request ≠ trusted record, a field-by-field comparison table, plain-language findings, and lists of checks performed and *not* performed.
+- **Simulated payment gate:**
+  - HOLD locks release.
+  - REVIEW requires a reviewer note and independent confirmation.
+  - A clean result allows a clearly labeled simulated release.
+
+| Legitimate | Unknown supplier | Prompt injection |
+|---|---|---|
+| ![](submission-assets/screenshots/03-no-mismatch-legitimate.jpg) | ![](submission-assets/screenshots/05-review-unknown-supplier.jpg) | ![](submission-assets/screenshots/04-hold-prompt-injection.jpg) |
+
+## Why AI, and why not *only* AI
+
+Payment requests are free text: forwarded threads, tables, chat messages, mixed languages. Rules alone can't reliably find "the account this request wants paid" in them. **That reading step is what the AI is for.**
+
+Deciding whether to pay is different. A model can be manipulated by the very document it reads, can hallucinate, and can't explain itself with evidence. So in ProofPay **the model never makes or sees the decision**:
+
+![Architecture](submission-assets/architecture.png)
+
+1. **Extract (AI, untrusted).** `generateText` + `Output.object({ schema })` (AI SDK 7) through the Vercel AI Gateway. The schema contains only observed fields and excerpts. It has no field for a verdict, a risk score, or reference data.
+2. **Validate.** Zod validation, in the adapter *and* again in the API handler. Invalid output, errors, and timeouts return an error, never a result.
+3. **Ground (code).** Every claimed value must be backed by an excerpt that occurs in the source, and must be a complete token within it:
+   - Account numbers can't be part of a longer number.
+   - Names must be whole segments of the cited line.
+   - The beneficiary must equal a value the request explicitly labels as payee.
+   - Email domains can't be extended.
+   - Amounts are decimal strings, compared in minor units.
+4. **Scan (code, no AI).** The raw text is scanned independently for:
+   - account identifiers;
+   - registered supplier names;
+   - sender header domains;
+   - prompt-injection, payment-change, and urgency language.
+5. **Decide (code).** Rules compare grounded facts with the trusted registry. Any critical finding → HOLD. Any warning → REVIEW. Otherwise → no mismatch.
+
+### Security safeguards (each covered by tests)
+
+| Attack | Result |
+|---|---|
+| Invoice tells the AI to ignore its instructions / report the trusted account | Injection surfaced as a finding. The substituted account is still caught by the AI-independent scan → **HOLD** |
+| Trusted account placed in a footer as a decoy, payment directed elsewhere | Any unregistered destination in the text → **HOLD** |
+| Model fabricates an excerpt or the trusted account | Grounding rejects it → treated as missing → never a pass |
+| Lookalike sender domain (`atlasc1oud`, extra tokens, other TLD) | **HOLD** |
+| Supplier name matches, beneficiary doesn't | **HOLD** |
+| Manually entered sender contradicts the document's From line | **REVIEW**, plus a lookalike check on the document's sender |
+| Unknown, ambiguous, or multiply-named supplier | **REVIEW**, never silently resolved |
+| Malformed model output, provider outage, timeout | Error shown. Nothing verified or released |
+
+Request text is never stored or logged. Error logs contain only error names and status codes.
+
+## Testing and evaluation
+
+```bash
+pnpm test        # 92 deterministic tests — no network
+pnpm eval        # live AI over a 25-case labeled synthetic set (needs AI_GATEWAY_API_KEY)
+pnpm eval -- --set=demo
 ```
-src/domain/       pure TypeScript security core (no React, network, or AI imports)
-  types.ts        Zod schemas and contracts
-  normalize.ts    account/name/domain/decimal normalization, whole-token matching
-  evidence.ts     grounding of AI claims against the source
-  signals.ts      deterministic text signals and account scan
-  verify.ts       rules, explanations, comparisons, verdict
-src/ai/           Extractor interface + AI SDK implementation (provider swap point)
-src/server/       /api/verify handler (validation, extraction, replay, verification)
-src/fixtures/     synthetic trusted suppliers and labeled sample requests
-src/components/   verification console and result view
-tests/            vitest: normalization, grounding, rules, attacks, API route
-scripts/          eval.ts (live model run) and smoke.ts (HTTP smoke test)
-```
 
-## Running locally
+Final live run with `openai/gpt-5-mini`:
+- **25/25** expected verdicts, all required findings present.
+- **13/13** critical cases held.
+- **0** legitimate requests held.
+- **0** non-legitimate requests passed.
+
+The demo set returned 6/6. Median latency is about 13 s.
+
+The first run scored 23/25 with 2 API errors. Three fixes followed, and the failures are documented in **[EVALUATION.md](EVALUATION.md)**. That file also covers the limitations: a small, self-authored synthetic set, and fixes made after seeing results. **These numbers are not a real-world accuracy claim.**
+
+## Run locally
 
 ```bash
 pnpm install
-cp .env.example .env.local     # add AI_GATEWAY_API_KEY
-pnpm dev
+cp .env.example .env.local    # add your key
+pnpm dev                      # http://localhost:3000
 ```
 
 | Variable | Purpose |
 |---|---|
-| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key for local live extraction. On Vercel, OIDC is used automatically. |
-| `PROOFPAY_MODEL` | Optional. Gateway model id; default `openai/gpt-5-mini`. |
+| `AI_GATEWAY_API_KEY` | Vercel AI Gateway key. On Vercel, OIDC can be used instead. |
+| `PROOFPAY_MODEL` | Optional gateway model id. Default `openai/gpt-5-mini`. The free gateway tier rejects Anthropic models. |
 
-Without credentials, the app still works for the six bundled samples through a clearly labeled **offline replay**. The replay uses stored reference extractions and is shown as "Offline replay — stored reference extraction, not live AI". It applies only when a sample is explicitly selected and left unedited. Arbitrary input with no available model gets an honest error, never a substitute result.
+Without a working model, the six bundled samples still run through an **offline replay**, labeled "Offline replay — stored reference extraction, not live AI". Replay requires the sample to be selected explicitly and left unedited. Any other input gets an honest error.
 
-## Testing
+## Project structure
 
-```bash
-pnpm test                 # all deterministic logic + API route with mocked extractors (no network)
-pnpm lint
-pnpm exec tsc --noEmit
-pnpm build
-pnpm eval                 # live model over all samples (needs credentials); prints actual results
-pnpm smoke [baseUrl]      # HTTP smoke test against a running server
+```
+src/domain/      security core, pure TypeScript (grounding, normalization, signals, rules, verdict)
+src/ai/          Extractor interface + AI SDK implementation (the only provider-specific code)
+src/server/      /api/verify handler: validation, extraction, replay rules, verification
+src/fixtures/    synthetic trusted suppliers and demo samples
+src/components/  verification console and result view
+eval/            labeled evaluation cases and recorded results
+tests/           vitest suites, including adversarial cases
 ```
 
-The tests cover:
-- the six demo scenarios;
-- conflicting supplier identities and ambiguous suppliers;
-- domain-only identification;
-- ungrounded model claims;
-- appended-digit accounts, truncated beneficiaries, and extended email domains;
-- multiple destination accounts;
-- decimal money handling;
-- explicit-sample-only replay;
-- a malicious model and an injection-obedient model.
+Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, AI SDK 7, Vercel AI Gateway, Zod 4, Vitest.
 
 ## Limitations
 
-- Text input only (no PDF/OCR yet). No email header parsing or authentication.
-- The registry is a fixed synthetic fixture. In practice it would come from your own supplier onboarding.
-- No accuracy claims: detection quality on real-world requests has not been measured.
+- Text input only. No PDF/OCR, no email-header parsing, no SPF/DKIM/DMARC, no bank account-ownership checks.
+- The trusted registry is a fixed synthetic fixture. In practice it would come from supplier onboarding (call-back verification) or an accounting system.
+- Conservative by design: unusual formats end in REVIEW rather than a guess.
+- Live extraction takes about 10–20 s per request.
+
+## What's next
+
+- Read supplier records from accounting software (Xero / QuickBooks / Odoo) instead of fixtures.
+- Ingest invoices from a shared inbox and PDFs.
+- Record how a supplier's account change was verified (who called whom, when) as a new trusted record.
+- A larger, independently written evaluation set.

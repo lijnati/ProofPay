@@ -22,14 +22,31 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
 - [ ] M6 **Deploy**: BLOCKED. The Vercel CLI needs a one-time login by the user (`! npx vercel login`). The MCP API would require inlining every source file.
 - [x] **Live AI run**: `openai/gpt-5-mini` via the AI Gateway (free tier blocks Anthropic models; the default was changed to match)
 
+## Phase 2: judge-ready submission (2026-10-08)
+- [x] Baseline: lint, tsc, tests pass; repo clean of secrets (full history scanned); local == origin. **No Vercel project exists yet** (you deploy via GitHub).
+- [x] Security gaps found and fixed (tests first):
+  - decoy trusted account in a footer + different payee account → now HOLD
+  - manual sender contradicting the document's From line → SENDER_CONFLICT + lookalike check
+  - handler re-validates extractor output with Zod
+  - malformed output and timeouts → error, never a result
+- [x] Live evaluation (25 labeled synthetic cases, `pnpm eval`); 4 eval runs + 2 demo runs recorded in `eval/results/`:
+  - first run 23/25 with 2 API errors → three fixes
+  - final run 25/25, 13/13 held, 0 legitimate held, 0 non-legitimate passed
+  - see EVALUATION.md
+- [x] UI for judges: analyzed-request line, key evidence ≠ panel, "no record" panel for unknown suppliers, timed live progress state, 375px header overflow fixed
+- [x] Real screenshots (local production build, live model): `submission-assets/screenshots/01–09`; architecture diagram `submission-assets/architecture.{svg,png}`
+- [x] README rewritten; DEMO_SCRIPT.md, DEMO_SHOTLIST.md (with pre-recording checklist), DEVPOST_SUBMISSION.md
+- [ ] **You:** deploy from GitHub with `AI_GATEWAY_API_KEY` set; share the URL so I can verify production
+- [ ] **You:** record the video (OBS), upload, add links to README + Devpost; submit on Devpost
+
 ## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
-- [ ] Larger labeled eval suite, with results from real runs only
+- [x] Larger labeled eval suite (25 cases), with results from real runs only
 - [ ] Highlight excerpt locations in the source text
 - [ ] Copy-report button
 
 ## Verification log
-- 2026-10-08: `pnpm lint` clean · `pnpm exec tsc --noEmit` clean · `pnpm test` **84/84** · `pnpm build` OK
+- 2026-10-08: `pnpm lint` clean · `pnpm exec tsc --noEmit` clean · `pnpm test` **92/92** (Phase 2) · `pnpm build` OK
 - 2026-10-08: Mutation checks: disabling the account rule fails 3 tests; disabling grounding fails 5; disabling the AI-independent account cross-check fails the injection-obedient-model test
 - 2026-10-08: `scripts/smoke.ts` on local `next start`: 6/6 expected verdicts in **replay** mode; arbitrary text → 502 EXTRACTION_FAILED; server log shows only `GatewayInternalServerError (HTTP 403)`, no request content
 - 2026-10-08: Browser QA screenshots taken (Chrome, local production build)
