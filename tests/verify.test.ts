@@ -209,11 +209,33 @@ describe("CTO policy corrections", () => {
   const legit = sample("legit-northwind");
 
   it("a registered sender domain alone does not identify the supplier", () => {
+    // No registered supplier name anywhere in the text — only the sender domain.
+    const text = legit.text.replaceAll("Northwind Packaging Ltd", "NP Trading");
     const raw = structuredClone(legit.fallbackExtraction);
     raw.supplierName = { status: "missing", value: null, excerpt: null };
-    const r = run(raw, legit.text);
+    raw.beneficiaryName = { status: "found", value: "NP Trading", excerpt: "Beneficiary: NP Trading" };
+    const r = run(raw, text);
     expect(r.matchedSupplier).toBeNull();
     expect(codes(r.findings)).toContain("UNKNOWN_SUPPLIER");
+    expect(r.verdict).toBe("REVIEW");
+  });
+
+  it("identifies the supplier from a registered name in the text even if the model mislabels it", () => {
+    // Observed live: the model took the From display name ("Atlas Billing") as the supplier.
+    const s = sample("prompt-injection");
+    const raw = structuredClone(s.fallbackExtraction);
+    raw.supplierName = { status: "found", value: "Atlas Billing", excerpt: "From: Atlas Billing <billing@atlascloud.example>" };
+    const r = run(raw, s.text);
+    expect(r.matchedSupplier?.id).toBe("sup_atlas");
+    expect(codes(r.findings)).toContain("ACCOUNT_MISMATCH");
+    expect(r.verdict).toBe("HOLD");
+  });
+
+  it("text naming two different registered suppliers → ambiguous, review", () => {
+    const text = `${legit.text}\n\nCC: Atlas Cloud Hosting Inc.`;
+    const r = run(legit.fallbackExtraction, text);
+    expect(codes(r.findings)).toContain("AMBIGUOUS_SUPPLIER");
+    expect(r.matchedSupplier).toBeNull();
     expect(r.verdict).toBe("REVIEW");
   });
 
@@ -289,5 +311,23 @@ describe("beneficiary grounding", () => {
     raw.beneficiaryName = { status: "found", value: "Northwind Packaging Ltd", excerpt: "Accounts Receivable, Northwind Packaging Ltd" };
     const r = run(raw, text);
     expect(r.verdict).not.toBe("NO_MISMATCH_FOUND");
+  });
+});
+
+describe("model-reported supplier ambiguity", () => {
+  it("still compares against a uniquely named registered supplier, so critical mismatches surface", () => {
+    const s = sample("substituted-account");
+    const raw = structuredClone(s.fallbackExtraction);
+    raw.supplierName = { status: "ambiguous", value: null, excerpt: null };
+    const r = run(raw, s.text);
+    expect(r.matchedSupplier?.id).toBe("sup_northwind");
+    expect(codes(r.findings)).toEqual(expect.arrayContaining(["AMBIGUOUS_SUPPLIER", "ACCOUNT_MISMATCH", "BENEFICIARY_MISMATCH"]));
+    expect(r.verdict).toBe("HOLD");
+  });
+  it("can never pass, even when every detail matches", () => {
+    const legit = sample("legit-northwind");
+    const raw = structuredClone(legit.fallbackExtraction);
+    raw.supplierName = { status: "ambiguous", value: null, excerpt: null };
+    expect(run(raw, legit.text).verdict).toBe("REVIEW");
   });
 });

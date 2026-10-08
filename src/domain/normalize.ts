@@ -181,7 +181,7 @@ export function containsWholePhrase(text: string, value: string): boolean {
   if (!tokens.length) return false;
   const body = tokens.map(escapeRe).join("[^\\p{L}\\p{N}\\n]{1,3}");
   const re = new RegExp(
-    `(?<=(?:^|\\n|[:,;|(\\u2013\\u2014-])[ \\t]*)${body}(?=[ \\t]*(?:$|\\n|[,;|()\\u2013\\u2014]|\\.(?:\\s|$)|-\\s))`,
+    `(?<=(?:^|\\n|[:,;|(\\u2013\\u2014-])[ \\t]*)${body}(?=[ \\t]*(?:$|\\n|[,;|()<\\u2013\\u2014]|\\.(?:\\s|$)|-\\s))`,
     "iu",
   );
   return re.test(text.normalize("NFKC").replace(/\r\n/g, "\n"));

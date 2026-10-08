@@ -1,4 +1,5 @@
 import {
+  containsWholePhrase,
   extractDomain,
   formatAmount,
   toMinorUnits,
@@ -74,9 +75,16 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
   // a claimed identity (pasted text is not authenticated), so it can confirm
   // or contradict a name match but never establish one on its own.
   const senderDomain = usable(x.senderEmail) ? extractDomain(x.senderEmail.value) : null;
-  const nameCandidates = usable(x.supplierName)
+  // Candidates come from (a) the model's grounded supplier name and (b) a
+  // deterministic scan for registered names/aliases written in the text.
+  // Matching a record can never by itself produce a pass: NO_MISMATCH_FOUND
+  // still requires account, beneficiary, and sender to match that record.
+  const modelAmbiguous = x.supplierName.status === "ambiguous";
+  const byModel = usable(x.supplierName)
     ? registry.filter((s) => nameMatches(x.supplierName.value!, [s.legalName, ...s.aliases]))
     : [];
+  const byText = registry.filter((s) => [s.legalName, ...s.aliases].some((n) => containsWholePhrase(source, n)));
+  const nameCandidates = [...new Set([...byModel, ...byText])];
   const supplier = nameCandidates.length === 1 ? nameCandidates[0] : null;
   const domainOwner = senderDomain ? registry.find((s) => s.senderDomains.includes(senderDomain)) ?? null : null;
   const matchBasis: VerificationResult["matchBasis"] = supplier
@@ -105,17 +113,27 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
       code: "AMBIGUOUS_SUPPLIER",
       severity: "warning",
       field: "supplierName",
-      title: "Supplier matches more than one trusted record",
-      explanation: `“${x.supplierName.value}” matches ${nameCandidates.map((s) => s.legalName).join(" and ")}. ProofPay will not guess which record to compare against.`,
+      title: "Request names more than one trusted supplier",
+      explanation: `The request matches ${nameCandidates.map((s) => s.legalName).join(" and ")}. ProofPay will not guess which record to compare against.`,
       observed: observe(x.supplierName),
       expected: null,
     });
     notPerformed.push("Payment account and beneficiary — supplier could not be identified uniquely");
+  } else if (supplier && modelAmbiguous) {
+    // Compare anyway so critical mismatches surface, but never allow a pass.
+    add({
+      code: "AMBIGUOUS_SUPPLIER",
+      severity: "warning",
+      field: "supplierName",
+      title: "Supplier is named inconsistently",
+      explanation: `The request identifies the requesting company inconsistently. It was compared with the trusted record for ${supplier.legalName}, the only registered supplier named in the text, but a person should confirm who is asking for payment.`,
+      observed: null,
+      expected: expectFrom(supplier, supplier.legalName),
+    });
+    performed.push(`Compared with trusted record “${supplier.legalName}”, the only registered supplier named in the request`);
   } else if (!supplier) {
     const reason =
-      x.supplierName.status === "ambiguous"
-        ? "The request names the supplier inconsistently, so it cannot be matched to a trusted record."
-        : usable(x.supplierName)
+      usable(x.supplierName)
           ? `“${x.supplierName.value}” is not in your trusted supplier registry, so there are no previously verified payment details to compare against. Verify the supplier through an independent channel before paying.`
           : "The request does not clearly name a supplier, so there are no previously verified payment details to compare against.";
     add({
@@ -132,7 +150,7 @@ export function verifyRequest({ extraction: x, source, registry }: VerifyInput):
     });
     notPerformed.push("Payment account and beneficiary — no trusted record exists to compare against");
   } else {
-    performed.push(`Supplier identified as trusted record “${supplier.legalName}” by registered name`);
+    performed.push(`Supplier identified as trusted record “${supplier.legalName}” by its registered name in the request`);
   }
 
   // ---- Sender domain (claimed identity, not authentication) ---------------
