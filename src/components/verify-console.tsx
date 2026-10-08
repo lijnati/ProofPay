@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { VerifyResponse } from "@/server/verify-handler";
 import { MAX_REQUEST_CHARS } from "@/domain/types";
 import { IconArrow } from "./icons";
@@ -207,20 +207,40 @@ function EmptyState() {
 }
 
 function LoadingState() {
+  const [elapsed, setElapsed] = useState(0);
+  useEffect(() => {
+    const started = Date.now();
+    const id = setInterval(() => setElapsed(Math.floor((Date.now() - started) / 1000)), 250);
+    return () => clearInterval(id);
+  }, []);
+  const steps = [
+    { label: "AI reads the request and quotes the payee, account, amount, and sender", active: true },
+    { label: "Every quoted value is checked against the original text", active: false },
+    { label: "Deterministic rules compare the facts with your trusted records", active: false },
+  ];
   return (
-    <div className="rounded-xl border border-line bg-surface p-6" role="status">
-      <div className="flex items-center gap-3 text-sm text-ink-2">
-        <span className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-ink-3 opacity-60" />
-          <span className="relative inline-flex size-2 rounded-full bg-ink-2" />
-        </span>
-        Extracting payment facts and comparing with trusted records…
+    <div className="animate-enter rounded-xl border border-line bg-surface p-6" role="status" aria-live="polite">
+      <div className="flex items-baseline justify-between gap-4">
+        <p className="text-sm font-medium">Verifying request</p>
+        <p className="font-mono text-xs tabular-nums text-ink-3">{elapsed}s</p>
       </div>
-      <div className="mt-6 space-y-3" aria-hidden>
-        {[72, 100, 88, 94, 60].map((w, i) => (
-          <div key={i} className="h-3 animate-pulse rounded bg-sunken" style={{ width: `${w}%` }} />
+      <ol className="mt-5 space-y-3.5">
+        {steps.map((s, i) => (
+          <li key={s.label} className="flex items-start gap-3 text-[13px]">
+            <span className="relative mt-1 flex size-2 shrink-0">
+              {s.active && <span className="absolute inline-flex size-full animate-ping rounded-full bg-ink-3 opacity-60" />}
+              <span className={`relative inline-flex size-2 rounded-full ${s.active ? "bg-ink-2" : "bg-line-strong"}`} />
+            </span>
+            <span className={s.active ? "text-ink-2" : "text-ink-4"}>
+              <span className="mr-1.5 font-mono text-[11px] text-ink-4">0{i + 1}</span>
+              {s.label}
+            </span>
+          </li>
         ))}
-      </div>
+      </ol>
+      <p className="mt-5 border-t border-line pt-3 text-[11px] text-ink-4">
+        Live AI extraction usually takes 10–20 seconds. Steps 02 and 03 run in milliseconds once it returns.
+      </p>
     </div>
   );
 }

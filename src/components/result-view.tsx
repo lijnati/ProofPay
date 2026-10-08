@@ -30,16 +30,20 @@ const VERDICT_COPY: Record<Verdict, { title: string; tone: string; ring: string;
   },
 };
 
-export function ResultView({ data }: { data: VerifyResponse }) {
+/**
+ * `preview` renders the same components for the landing-page showcase:
+ * verdict, evidence, and the gate state, without the long findings/checks lists.
+ */
+export function ResultView({ data, preview = false }: { data: VerifyResponse; preview?: boolean }) {
   const { result } = data;
   const counts = countBy(result.findings);
   return (
     <div className="flex flex-col gap-5">
       <VerdictHeader data={data} counts={counts} />
       <EvidenceTable rows={result.comparisons} supplier={result.matchedSupplier} />
-      {result.findings.length > 0 && <FindingList findings={result.findings} />}
+      {!preview && result.findings.length > 0 && <FindingList findings={result.findings} />}
       <PaymentGate data={data} />
-      <Checks performed={result.checksPerformed} notPerformed={result.checksNotPerformed} />
+      {!preview && <Checks performed={result.checksPerformed} notPerformed={result.checksNotPerformed} />}
     </div>
   );
 }
@@ -79,8 +83,10 @@ function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<
           </p>
           <h2 className="mt-0.5 text-xl font-semibold tracking-tight sm:text-2xl">{v.title}</h2>
           <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-ink-2 text-pretty">{summary(data)}</p>
+          <AnalyzedLine data={data} />
         </div>
       </div>
+      <KeyEvidence data={data} />
       <dl className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-black/5 pt-4 text-xs text-ink-3">
         <Meta label="Trusted record">
           {data.result.matchedSupplier ? data.result.matchedSupplier.legalName : <span className="text-review">None found</span>}
@@ -101,6 +107,80 @@ function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<
         </Meta>
       </dl>
     </header>
+  );
+}
+
+/** One line answering "what request was analyzed?" — only facts grounded in the text. */
+function AnalyzedLine({ data }: { data: VerifyResponse }) {
+  const x = data.extraction;
+  const parts = [
+    x.invoiceId.status === "found" ? `Invoice ${x.invoiceId.value}` : null,
+    x.amount.status === "found" && x.amount.value ? formatAmount(x.amount.value, x.currency.value) : null,
+    x.senderEmail.status === "found" ? `from ${x.senderEmail.value}` : "no sender",
+  ].filter(Boolean);
+  return (
+    <p className="mt-2 break-words font-mono text-[11.5px] text-ink-3">
+      <span className="font-sans text-ink-4">Analyzed: </span>
+      {parts.join(" · ")}
+    </p>
+  );
+}
+
+/**
+ * The single most important comparison, shown without scrolling: the top
+ * mismatch (request ≠ trusted record), or for a clean result the account match.
+ */
+function KeyEvidence({ data }: { data: VerifyResponse }) {
+  const { verdict, findings, comparisons } = data.result;
+  const top =
+    verdict === "NO_MISMATCH_FOUND"
+      ? null
+      : findings.find((f) => f.severity === (verdict === "HOLD" ? "critical" : "warning") && f.observed && f.expected);
+  const accountRow = comparisons.find((c) => c.field === "accountIdentifier");
+  // A request that cannot be compared at all is shown as such, not left blank.
+  const noRecord = !top && verdict !== "NO_MISMATCH_FOUND" ? findings.find((f) => f.code === "UNKNOWN_SUPPLIER" && f.observed) : undefined;
+  const item = top
+    ? { title: top.title, observed: top.observed!, expected: top.expected!, match: false }
+    : noRecord
+      ? {
+          title: noRecord.title,
+          observed: noRecord.observed!,
+          expected: { value: "No record", source: "This supplier is not in your trusted supplier registry, so nothing can be verified." },
+          match: false,
+        }
+    : verdict === "NO_MISMATCH_FOUND" && accountRow?.observed && accountRow.expected
+      ? { title: "Payment account matches the registered account", observed: accountRow.observed, expected: accountRow.expected, match: true }
+      : null;
+  if (!item) return null;
+  return (
+    <div className="mt-4 overflow-hidden rounded-lg border border-black/10 bg-surface">
+      <p className={`border-b border-line px-4 py-2 text-[12px] font-medium ${item.match ? "text-clear" : verdict === "HOLD" ? "text-hold" : "text-review"}`}>
+        {item.title}
+      </p>
+      <div className="grid sm:grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)]">
+        <div className="min-w-0 px-4 py-3">
+          <p className="text-[10px] uppercase tracking-wider text-ink-4">This request</p>
+          <p className={`mt-1 break-words font-mono text-[15px] font-medium ${item.match ? "text-ink" : "text-hold"}`}>
+            {item.observed.value}
+          </p>
+          {item.observed.excerpt && (
+            <p className="mt-1 break-words text-[11px] leading-snug text-ink-3">Quoted: “{item.observed.excerpt}”</p>
+          )}
+          {item.observed.origin === "sender_field" && <p className="mt-1 text-[11px] text-ink-3">Entered sender — not authenticated</p>}
+        </div>
+        <div
+          aria-hidden
+          className={`flex items-center justify-center border-y border-line px-3 py-1 font-mono text-lg sm:border-x sm:border-y-0 ${item.match ? "text-clear" : "text-hold"}`}
+        >
+          {item.match ? "=" : "≠"}
+        </div>
+        <div className="min-w-0 bg-sunken/50 px-4 py-3">
+          <p className="text-[10px] uppercase tracking-wider text-ink-4">Trusted record</p>
+          <p className="mt-1 break-words font-mono text-[15px] font-medium text-ink-2">{item.expected.value}</p>
+          <p className="mt-1 text-[11px] leading-snug text-ink-4">{item.expected.source}</p>
+        </div>
+      </div>
+    </div>
   );
 }
 
