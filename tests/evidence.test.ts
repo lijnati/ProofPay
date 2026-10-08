@@ -45,7 +45,7 @@ describe("groundExtraction", () => {
 
   it("demotes an amount not present in its excerpt", () => {
     const raw = clone(legit.fallbackExtraction);
-    raw.amount = { status: "found", value: 486, excerpt: "Amount due: GBP 4,860.00" };
+    raw.amount = { status: "found", value: "486.00", excerpt: "Amount due: GBP 4,860.00" };
     expect(groundExtraction(raw, legit.text).amount.status).toBe("unsupported");
   });
 
