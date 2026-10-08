@@ -131,10 +131,80 @@ export function currencyCodesIn(text: string): Set<string> {
   return codes;
 }
 
-export function formatAmount(amount: number, currency: string | null): string {
-  const formatted = amount.toLocaleString("en-US", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+// ---- Money: decimal strings only, never floating point -------------------
+
+/**
+ * Canonical 2-dp decimal string, or null if not a plain amount.
+ * "4,860" → "4860.00", "0012.5" → "12.50", "4.860,00" → null (unsupported format).
+ */
+export function canonicalDecimal(value: string): string | null {
+  const s = value.trim().replace(/,(?=\d{3}(?:\D|$))/g, "");
+  const m = /^(\d{1,15})(?:\.(\d{1,2}))?$/.exec(s);
+  if (!m) return null;
+  const int = m[1].replace(/^0+(?=\d)/, "");
+  return `${int}.${(m[2] ?? "").padEnd(2, "0")}`;
+}
+
+/** Minor units (cents) as BigInt for exact comparison. Input must be canonical. */
+export function toMinorUnits(canonical: string): bigint {
+  const [int, frac] = canonical.split(".");
+  return BigInt(int) * BigInt(100) + BigInt(frac);
+}
+
+/** Canonical decimals of every amount-like number written in `text`. */
+export function amountsIn(text: string): string[] {
+  const out: string[] = [];
+  for (const m of text.matchAll(/\d{1,3}(?:,\d{3})+(?:\.\d{1,2})?(?!\d)|\d+(?:\.\d{1,2})?(?![\d,])/g)) {
+    const c = canonicalDecimal(m[0]);
+    if (c) out.push(c);
+  }
+  return out;
+}
+
+export function formatAmount(canonical: string, currency: string | null): string {
+  const [int, frac] = (canonicalDecimal(canonical) ?? canonical).split(".");
+  const grouped = int.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+  const formatted = frac != null ? `${grouped}.${frac}` : grouped;
   return currency ? `${currency} ${formatted}` : formatted;
+}
+
+const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * True when `value` appears in `text` as a COMPLETE name segment: it starts at
+ * a line start or after a label delimiter (":", ",", "—", …) and ends at a line
+ * end or delimiter. "Northwind Packaging Ltd" is NOT complete inside
+ * "Northwind Packaging Ltd Holdings" or "Not Northwind Packaging Ltd".
+ */
+export function containsWholePhrase(text: string, value: string): boolean {
+  const tokens = value.normalize("NFKC").split(/[^\p{L}\p{N}]+/u).filter(Boolean);
+  if (!tokens.length) return false;
+  const body = tokens.map(escapeRe).join("[^\\p{L}\\p{N}\\n]{1,3}");
+  const re = new RegExp(
+    `(?<=(?:^|\\n|[:,;|(\\u2013\\u2014-])[ \\t]*)${body}(?=[ \\t]*(?:$|\\n|[,;|()\\u2013\\u2014]|\\.(?:\\s|$)|-\\s))`,
+    "iu",
+  );
+  return re.test(text.normalize("NFKC").replace(/\r\n/g, "\n"));
+}
+
+/** True when `email` appears in `text` as a complete address (domain not extended). */
+export function containsWholeEmail(text: string, email: string): boolean {
+  const re = new RegExp(`(?<![A-Za-z0-9._%+\\-])${escapeRe(email.trim())}(?![A-Za-z0-9\\-]|\\.[A-Za-z0-9])`, "i");
+  return re.test(text);
+}
+
+// ---- Account identifiers ---------------------------------------------------
+
+/**
+ * True when `value` occurs in `text` as a COMPLETE account identifier, allowing
+ * single spaces/dashes between characters. A value that is only part of a
+ * longer identifier (e.g. extra digits appended or prepended) does not count.
+ */
+export function containsWholeAccount(text: string, value: string): boolean {
+  const chars = normalizeAccount(value).split("");
+  if (chars.length < 6) return false;
+  const body = chars.map((c) => c.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("[ \\-]?");
+  // Not glued to other alphanumerics, and not continued by digits after a single separator.
+  const re = new RegExp(`(?<![A-Za-z0-9])(?<![0-9][ \\-])${body}(?![A-Za-z0-9])(?![ \\-][0-9])`, "i");
+  return re.test(text.normalize("NFKC"));
 }

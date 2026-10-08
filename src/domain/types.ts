@@ -28,7 +28,8 @@ export const RawExtractionSchema = z.object({
   supplierName: extractedField(z.string().max(200)),
   senderEmail: extractedField(z.string().max(320)),
   invoiceId: extractedField(z.string().max(100)),
-  amount: extractedField(z.number().finite().nonnegative()),
+  /** Decimal string, e.g. "4860.00". Never a float. Format is enforced during grounding. */
+  amount: extractedField(z.string().max(32)),
   currency: extractedField(z.string().max(10)),
   beneficiaryName: extractedField(z.string().max(200)),
   accountIdentifier: extractedField(z.string().max(64)),
@@ -89,7 +90,7 @@ export interface GroundedExtraction {
   supplierName: GroundedField<string>;
   senderEmail: GroundedField<string>;
   invoiceId: GroundedField<string>;
-  amount: GroundedField<number>;
+  amount: GroundedField<string>;
   currency: GroundedField<string>;
   beneficiaryName: GroundedField<string>;
   accountIdentifier: GroundedField<string>;
@@ -112,7 +113,8 @@ export interface TrustedSupplier {
     bankName: string;
   };
   currency: string;
-  typicalAmount: { min: number; max: number };
+  /** Decimal strings. Informational only — never decisive. */
+  typicalAmount: { min: string; max: string };
   /** How the record was originally established (synthetic for the demo). */
   referenceSource: string;
   lastConfirmed: string;
@@ -137,7 +139,8 @@ export type FindingCode =
   | "INSTRUCTION_INJECTION"
   | "URGENCY_LANGUAGE"
   | "SENDER_NOT_PROVIDED"
-  | "AMOUNT_OUTSIDE_TYPICAL";
+  | "AMOUNT_OUTSIDE_TYPICAL"
+  | "AMBIGUOUS_SUPPLIER";
 
 export interface Observed {
   value: string;
@@ -175,7 +178,8 @@ export interface ComparisonRow {
 export interface VerificationResult {
   verdict: Verdict;
   matchedSupplier: TrustedSupplier | null;
-  matchBasis: "name" | "domain" | "name+domain" | null;
+  /** Supplier identity comes from name/alias only; "name+domain" means the claimed sender domain also matched. */
+  matchBasis: "name" | "name+domain" | null;
   findings: Finding[];
   comparisons: ComparisonRow[];
   checksPerformed: string[];
@@ -185,6 +189,8 @@ export interface VerificationResult {
 export const VerifyRequestSchema = z.object({
   text: z.string(),
   senderEmail: z.string().max(320).optional(),
+  /** Set only when the user selected a bundled synthetic sample (enables labeled offline replay). */
+  sampleId: z.string().max(64).optional(),
 });
 
 export const MAX_REQUEST_CHARS = 20_000;

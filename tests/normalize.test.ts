@@ -54,3 +54,46 @@ describe("isLookalikeDomain", () => {
     expect(isLookalikeDomain("freemail.example", trusted)).toBe(false);
   });
 });
+
+import { amountsIn, canonicalDecimal, containsWholeAccount, containsWholeEmail, containsWholePhrase, formatAmount, toMinorUnits } from "@/domain/normalize";
+
+describe("decimal money", () => {
+  it("canonicalizes decimal strings without floats", () => {
+    expect(canonicalDecimal("4,860")).toBe("4860.00");
+    expect(canonicalDecimal("0012.5")).toBe("12.50");
+    expect(canonicalDecimal("312,500.00")).toBe("312500.00");
+    expect(canonicalDecimal("4.860,00")).toBeNull();
+    expect(canonicalDecimal("12.345")).toBeNull();
+    expect(canonicalDecimal("-5")).toBeNull();
+  });
+  it("compares exactly in minor units", () => {
+    expect(toMinorUnits("0.10") + toMinorUnits("0.20")).toBe(toMinorUnits("0.30"));
+    expect(toMinorUnits("9000.01") > toMinorUnits("9000.00")).toBe(true);
+  });
+  it("finds amounts in text and formats them", () => {
+    expect(amountsIn("Amount due: GBP 18,450.00")).toContain("18450.00");
+    expect(formatAmount("312500.00", "KES")).toBe("KES 312,500.00");
+  });
+});
+
+describe("whole-token matching", () => {
+  it("accounts must be complete identifiers", () => {
+    expect(containsWholeAccount("IBAN: GB82 WEST 1234 5698 7654 32", "GB82WEST12345698765432")).toBe(true);
+    expect(containsWholeAccount("IBAN GB82 WEST 1234 5698 7654 32", "GB82 WEST 1234 5698 7654 32")).toBe(true);
+    expect(containsWholeAccount("IBAN: GB82 WEST 1234 5698 7654 3299", "GB82 WEST 1234 5698 7654 32")).toBe(false);
+    expect(containsWholeAccount("IBAN: GB82 WEST 1234 5698 7654 32 99", "GB82 WEST 1234 5698 7654 32")).toBe(false);
+    expect(containsWholeAccount("Account: 12 7712 0090 3318", "7712 0090 3318")).toBe(false);
+  });
+  it("names must be complete segments", () => {
+    expect(containsWholePhrase("Beneficiary: Northwind Packaging Ltd\n", "Northwind Packaging Ltd")).toBe(true);
+    expect(containsWholePhrase("Beneficiary: Northwind Packaging Ltd Holdings\n", "Northwind Packaging Ltd")).toBe(false);
+    expect(containsWholePhrase("Beneficiary: Not Northwind Packaging Ltd\n", "Northwind Packaging Ltd")).toBe(false);
+    expect(containsWholePhrase("Account name: K. Fresh Trading", "K. Fresh Trading")).toBe(true);
+    expect(containsWholePhrase("Atlas Cloud Hosting Inc. — Billing", "Atlas Cloud Hosting Inc.")).toBe(true);
+  });
+  it("emails must not have an extended domain", () => {
+    expect(containsWholeEmail("<accounts@northwind-packaging.example>", "accounts@northwind-packaging.example")).toBe(true);
+    expect(containsWholeEmail("<accounts@northwind-packaging.example.evil.example>", "accounts@northwind-packaging.example")).toBe(false);
+    expect(containsWholeEmail("<xaccounts@northwind-packaging.example>", "accounts@northwind-packaging.example")).toBe(false);
+  });
+});
