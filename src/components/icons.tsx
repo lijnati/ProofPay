@@ -3,10 +3,17 @@ import type { SVGProps } from "react";
 type P = SVGProps<SVGSVGElement>;
 const base = { fill: "none", stroke: "currentColor", strokeWidth: 1.75, strokeLinecap: "round", strokeLinejoin: "round", viewBox: "0 0 24 24" } as const;
 
+/** Brand mark: "≠" — the request does not equal the record. */
 export const Logo = (p: P) => (
-  <svg viewBox="0 0 24 24" aria-hidden {...p}>
-    <rect x="2" y="2" width="20" height="20" rx="5" fill="#17181a" />
-    <path d="M7.5 12.5l3 3 6-7" fill="none" stroke="#fff" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
+  <svg viewBox="0 0 32 32" aria-hidden {...p}>
+    <rect width="32" height="32" rx="7" fill="#17181a" />
+    <path d="M9 13h14M9 19h14" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
+    <path d="M19.5 8.5 12.5 23.5" stroke="#e0705f" strokeWidth="2.6" strokeLinecap="round" />
+  </svg>
+);
+export const IconGitHub = (p: P) => (
+  <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden {...p}>
+    <path d="M12 2a10 10 0 00-3.16 19.49c.5.09.68-.22.68-.48v-1.7c-2.78.6-3.37-1.34-3.37-1.34-.45-1.16-1.11-1.47-1.11-1.47-.91-.62.07-.6.07-.6 1 .07 1.53 1.03 1.53 1.03.9 1.52 2.34 1.08 2.91.83.09-.65.35-1.08.63-1.33-2.22-.25-4.55-1.11-4.55-4.94 0-1.09.39-1.98 1.03-2.68-.1-.25-.45-1.27.1-2.65 0 0 .84-.27 2.75 1.02a9.6 9.6 0 015 0c1.91-1.29 2.75-1.02 2.75-1.02.55 1.38.2 2.4.1 2.65.64.7 1.03 1.59 1.03 2.68 0 3.84-2.34 4.68-4.57 4.93.36.31.68.92.68 1.85v2.74c0 .27.18.58.69.48A10 10 0 0012 2z" />
   </svg>
 );
 export const IconCheck = (p: P) => (

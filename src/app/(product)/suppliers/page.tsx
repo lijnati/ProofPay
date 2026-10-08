@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { TRUSTED_SUPPLIERS } from "@/fixtures/suppliers";
 import { formatAmount } from "@/domain/normalize";
 
-export const metadata: Metadata = { title: "Trusted records — ProofPay" };
+export const metadata: Metadata = { title: "Trusted records" };
 
 export default function SuppliersPage() {
   return (
