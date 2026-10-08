@@ -39,7 +39,7 @@ export function ResultView({ data, preview = false }: { data: VerifyResponse; pr
   const counts = countBy(result.findings);
   return (
     <div className="flex flex-col gap-5">
-      <VerdictHeader data={data} counts={counts} />
+      <VerdictHeader data={data} counts={counts} preview={preview} />
       <EvidenceTable rows={result.comparisons} supplier={result.matchedSupplier} />
       {!preview && result.findings.length > 0 && <FindingList findings={result.findings} />}
       <PaymentGate data={data} />
@@ -55,20 +55,26 @@ function countBy(findings: Finding[]) {
   );
 }
 
-function summary(data: VerifyResponse): string {
+/** What was found (reason) and what to do next (action), shown separately. */
+function summary(data: VerifyResponse): { reason: string; action: string } {
   const { verdict, findings, matchedSupplier } = data.result;
   if (verdict === "NO_MISMATCH_FOUND") {
-    return `The payee, account, and sender match the records you previously verified for ${matchedSupplier?.legalName ?? "this supplier"}. This is not a guarantee the request is legitimate.`;
+    return {
+      reason: `The payee, account, and sender match the records you previously verified for ${matchedSupplier?.legalName ?? "this supplier"}.`,
+      action: "You may proceed with your normal approval. This is not a guarantee the request is legitimate.",
+    };
   }
   const top = findings.filter((f) => f.severity === (verdict === "HOLD" ? "critical" : "warning"));
-  const lead =
-    verdict === "HOLD"
-      ? "Do not pay until the details are confirmed with the supplier through a channel you already trust."
-      : "ProofPay could not confirm this request against trusted records. A person should check it before paying.";
-  return `${top.map((f) => f.title).slice(0, 2).join(". ")}. ${lead}`;
+  return {
+    reason: `${top.map((f) => f.title).slice(0, 2).join(". ")}.`,
+    action:
+      verdict === "HOLD"
+        ? "Do not pay. Confirm the details by calling the supplier on a number you already have, not one from this request."
+        : "Have a person check this request against an independent source before paying.",
+  };
 }
 
-function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<Severity, number> }) {
+function VerdictHeader({ data, counts, preview }: { data: VerifyResponse; counts: Record<Severity, number>; preview: boolean }) {
   const v = VERDICT_COPY[data.result.verdict];
   const Icon = data.result.verdict === "HOLD" ? IconLock : data.result.verdict === "REVIEW" ? IconAlert : IconCheck;
   return (
@@ -82,7 +88,11 @@ function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<
             {data.result.verdict.replace(/_/g, " ")}
           </p>
           <h2 className="mt-0.5 text-xl font-semibold tracking-tight sm:text-2xl">{v.title}</h2>
-          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-ink-2 text-pretty">{summary(data)}</p>
+          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-ink-2 text-pretty">{summary(data).reason}</p>
+          <p className="mt-2 max-w-[62ch] text-sm leading-relaxed text-ink text-pretty">
+            <span className={`mr-1.5 text-[11px] font-semibold uppercase tracking-wider ${v.text}`}>Recommended action</span>
+            {summary(data).action}
+          </p>
           <AnalyzedLine data={data} />
         </div>
       </div>
@@ -102,9 +112,11 @@ function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<
             <span className="text-review">{data.extractionLabel}</span>
           )}
         </Meta>
-        <Meta label="Ref">
-          <span className="font-mono">{data.requestId.slice(0, 8)}</span>
-        </Meta>
+        {!preview && (
+          <Meta label="Ref">
+            <span className="font-mono">{data.requestId.slice(0, 8)}</span>
+          </Meta>
+        )}
       </dl>
     </header>
   );
@@ -118,10 +130,15 @@ function AnalyzedLine({ data }: { data: VerifyResponse }) {
     x.amount.status === "found" && x.amount.value ? formatAmount(x.amount.value, x.currency.value) : null,
     x.senderEmail.status === "found" ? `from ${x.senderEmail.value}` : "no sender",
   ].filter(Boolean);
+  const matched = data.result.matchedSupplier;
   return (
     <p className="mt-2 break-words font-mono text-[11.5px] text-ink-3">
       <span className="font-sans text-ink-4">Analyzed: </span>
       {parts.join(" · ")}
+      <span className="mt-0.5 block">
+        <span className="font-sans text-ink-4">Matched record: </span>
+        {matched ? matched.legalName : <span className="text-review">none</span>}
+      </span>
     </p>
   );
 }
@@ -139,9 +156,21 @@ function KeyEvidence({ data }: { data: VerifyResponse }) {
   const accountRow = comparisons.find((c) => c.field === "accountIdentifier");
   // A request that cannot be compared at all is shown as such, not left blank.
   const noRecord = !top && verdict !== "NO_MISMATCH_FOUND" ? findings.find((f) => f.code === "UNKNOWN_SUPPLIER" && f.observed) : undefined;
+  // A missing payment account is shown against what we would have expected.
+  const missingAccount =
+    !top && !noRecord && accountRow?.expected && !accountRow.observed
+      ? findings.find((f) => f.code === "MISSING_CRITICAL_FIELD" && f.field === "accountIdentifier")
+      : undefined;
   const item = top
     ? { title: top.title, observed: top.observed!, expected: top.expected!, match: false }
-    : noRecord
+    : missingAccount
+      ? {
+          title: "No payment account in this request",
+          observed: { value: "Not stated", excerpt: null, origin: "request_text" as const },
+          expected: accountRow!.expected!,
+          match: false,
+        }
+      : noRecord
       ? {
           title: noRecord.title,
           observed: noRecord.observed!,

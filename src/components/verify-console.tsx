@@ -69,8 +69,9 @@ export function VerifyConsole({ samples }: { samples: SampleOption[] }) {
     <main className="mx-auto grid max-w-[1240px] gap-6 px-4 py-6 sm:px-6 lg:grid-cols-[minmax(0,400px)_minmax(0,1fr)] lg:gap-8 lg:py-8">
       <section aria-labelledby="request-heading" className="flex flex-col gap-5 lg:sticky lg:top-[4.75rem] lg:self-start">
         <div>
-          <h1 className="text-[1.375rem] font-semibold leading-tight tracking-tight text-balance">
-            Check a payment request before you pay.
+          <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">Verification console</p>
+          <h1 className="mt-2 font-display text-[34px] leading-[1.05] text-balance">
+            Check a payment request <em className="italic">before you pay.</em>
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-3 text-pretty">
             Scammers can fake an invoice. ProofPay checks what they can&apos;t fake: your previously verified

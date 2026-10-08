@@ -8,7 +8,8 @@ export default function SuppliersPage() {
   return (
     <main className="mx-auto max-w-[1240px] px-4 py-6 sm:px-6 lg:py-8">
       <div className="max-w-2xl">
-        <h1 className="text-[1.375rem] font-semibold tracking-tight">Trusted supplier records</h1>
+        <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">Reference data</p>
+        <h1 className="mt-2 font-display text-[34px] leading-[1.05]">Trusted supplier records</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-3 text-pretty">
           The reference ProofPay compares every request against. In a real deployment these come from your own
           onboarding process, such as a call-back to a known contact. AI never creates or edits them.
