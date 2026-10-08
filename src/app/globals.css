@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  --color-canvas: #f7f7f5;
+  --color-surface: #ffffff;
+  --color-sunken: #f1f1ee;
+  --color-line: #e4e4df;
+  --color-line-strong: #d3d3cc;
+  --color-ink: #17181a;
+  --color-ink-2: #45474c;
+  --color-ink-3: #74767c;
+  --color-ink-4: #a1a3a8;
+
+  --color-hold: #a8322a;
+  --color-hold-soft: #fbf1ef;
+  --color-hold-line: #ecc9c4;
+  --color-review: #a0610d;
+  --color-review-soft: #fcf6ea;
+  --color-review-line: #ecd6ae;
+  --color-clear: #2f6f4f;
+  --color-clear-soft: #f0f6f2;
+  --color-clear-line: #c5ddcf;
+
+  --animate-enter: enter 260ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  font-feature-settings: "ss01", "cv11";
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: #dfe3ea;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
