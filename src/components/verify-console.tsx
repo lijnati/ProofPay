@@ -43,7 +43,7 @@ export function VerifyConsole({ samples }: { samples: SampleOption[] }) {
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ text, senderEmail: sender.trim() || undefined }),
+        body: JSON.stringify({ text, senderEmail: sender.trim() || undefined, sampleId: activeSample ?? undefined }),
         signal: controller.signal,
       });
       const json = await res.json().catch(() => null);
@@ -133,7 +133,7 @@ export function VerifyConsole({ samples }: { samples: SampleOption[] }) {
 
           <label className="flex flex-col gap-1.5">
             <span className="text-xs font-medium uppercase tracking-wider text-ink-3">
-              Sender address <span className="normal-case tracking-normal text-ink-4">— optional, overrides text</span>
+              Claimed sender <span className="normal-case tracking-normal text-ink-4">— optional · overrides text · not authenticated</span>
             </span>
             <input
               type="email"

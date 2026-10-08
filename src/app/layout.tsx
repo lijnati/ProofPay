@@ -17,17 +17,17 @@ export const viewport: Viewport = {
   themeColor: "#f7f7f5",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
       <body className="min-h-dvh">
         <header className="sticky top-0 z-20 border-b border-line bg-canvas/90 backdrop-blur">
-          <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-6 px-4 sm:px-6">
+          <div className="mx-auto flex h-14 max-w-[1240px] items-center gap-3 px-4 sm:gap-6 sm:px-6">
             <Link href="/" className="flex items-center gap-2 font-semibold tracking-tight">
               <Logo className="size-5" />
               ProofPay
             </Link>
-            <nav className="flex items-center gap-1 text-sm text-ink-3">
+            <nav className="flex items-center gap-0.5 whitespace-nowrap text-[13px] text-ink-3 sm:gap-1 sm:text-sm">
               <Link href="/" className="rounded-md px-2 py-1 hover:bg-sunken hover:text-ink">
                 Verify
               </Link>

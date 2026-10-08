@@ -22,7 +22,7 @@ const VERDICT_COPY: Record<Verdict, { title: string; tone: string; ring: string;
     dot: "bg-review",
   },
   NO_MISMATCH_FOUND: {
-    title: "No mismatch found",
+    title: "No mismatch against registered records",
     tone: "bg-clear-soft border-clear-line",
     ring: "border-clear-line",
     text: "text-clear",
@@ -91,9 +91,9 @@ function VerdictHeader({ data, counts }: { data: VerifyResponse; counts: Record<
         </Meta>
         <Meta label="Extraction">
           {data.extractionMode === "live" ? (
-            <>Live · {data.model}</>
+            <>{data.extractionLabel}</>
           ) : (
-            <span className="text-review">Offline replay — pre-computed sample extraction</span>
+            <span className="text-review">{data.extractionLabel}</span>
           )}
         </Meta>
         <Meta label="Ref">
@@ -203,7 +203,7 @@ function EvidenceTable({ rows, supplier }: { rows: ComparisonRow[]; supplier: Tr
 }
 
 function Provenance({ excerpt, origin }: { excerpt: string | null; origin: "request_text" | "sender_field" }) {
-  if (origin === "sender_field") return <p className="mt-1 text-[11px] text-ink-4">From the sender field you entered</p>;
+  if (origin === "sender_field") return <p className="mt-1 text-[11px] text-ink-4">Claimed sender you entered — not authenticated</p>;
   if (!excerpt) return null;
   return (
     <p className="mt-1 border-l-2 border-line-strong pl-2 text-[11px] leading-snug text-ink-3">
@@ -338,7 +338,7 @@ function PaymentGate({ data }: { data: VerifyResponse }) {
               <button
                 type="button"
                 disabled={!canApproveReview}
-                onClick={() => setReleased("Approved after human review.")}
+                onClick={() => setReleased(`Approved after human review. Reviewer note: “${note.trim()}”.`)}
                 className="h-10 rounded-lg bg-ink text-sm font-medium text-white transition-colors hover:bg-ink-2 disabled:cursor-not-allowed disabled:bg-sunken disabled:text-ink-4"
               >
                 Approve simulated payment
