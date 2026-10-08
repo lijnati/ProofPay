@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useId, useState } from "react";
 import type { VerifyResponse } from "@/server/verify-handler";
-import { IconArrow } from "../icons";
 import { ResultView } from "../result-view";
 
 export interface ShowcaseExample {
@@ -23,20 +22,18 @@ export function Showcase({ examples }: { examples: ShowcaseExample[] }) {
   const current = examples.find((e) => e.id === active)!;
 
   return (
-    <section id="product" aria-labelledby={`${baseId}-h`} className="border-b border-line bg-sunken/40">
-      <div className="mx-auto max-w-[1240px] px-4 py-20 sm:px-6 lg:py-28">
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
+    <section id="product" aria-labelledby={`${baseId}-h`} className="mesh-soft relative overflow-hidden">
+      <div className="mx-auto max-w-[1320px] px-5 py-28 sm:px-8 lg:py-36">
+        <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
           <div>
-            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-ink-3">The product</p>
-            <h2 id={`${baseId}-h`} className="mt-3 max-w-[22ch] font-display text-[36px] leading-[1.05] sm:text-[46px]">
-              Every verdict comes with its evidence.
+            <h2 id={`${baseId}-h`} className="max-w-[16ch] text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[56px]">
+              See the evidence, not a score.
             </h2>
-            <p className="mt-4 max-w-[52ch] text-[15px] leading-relaxed text-ink-2">
-              This is the real result screen, rendered from the real verification rules. Switch between requests to
-              see how the same supplier can pass or be held.
+            <p className="mt-5 max-w-[42ch] text-[17px] leading-[1.6] text-ink-3">
+              The real result screen, running the real rules on synthetic requests. No AI is called on this page.
             </p>
           </div>
-          <div role="tablist" aria-label="Example requests" className="flex flex-wrap gap-1 rounded-lg border border-line bg-surface p-1">
+          <div role="tablist" aria-label="Example results" className="flex flex-wrap gap-1 rounded-full bg-white/80 p-1 ring-1 ring-black/5 backdrop-blur">
             {examples.map((e) => (
               <button
                 key={e.id}
@@ -45,7 +42,7 @@ export function Showcase({ examples }: { examples: ShowcaseExample[] }) {
                 aria-selected={active === e.id}
                 aria-controls={`${baseId}-panel`}
                 onClick={() => setActive(e.id)}
-                className="h-9 rounded-md px-3.5 text-[13px] font-medium text-ink-3 transition-colors hover:text-ink aria-selected:bg-ink aria-selected:text-white"
+                className="h-10 rounded-full px-5 text-[14px] font-medium text-ink-3 transition-colors hover:text-ink aria-selected:bg-abyss aria-selected:text-white"
               >
                 {e.tab}
               </button>
@@ -57,39 +54,27 @@ export function Showcase({ examples }: { examples: ShowcaseExample[] }) {
           id={`${baseId}-panel`}
           role="tabpanel"
           aria-labelledby={`${baseId}-tab-${active}`}
-          className="mt-10 overflow-hidden rounded-xl border border-line bg-canvas shadow-[0_30px_60px_-30px_rgba(23,24,26,0.25)]"
+          className="mt-14 overflow-hidden rounded-3xl bg-canvas shadow-[0_40px_90px_-40px_rgba(10,20,40,0.35)] ring-1 ring-black/5"
         >
-          {/* Window chrome — mirrors the app's route */}
-          <div className="flex items-center gap-3 border-b border-line bg-surface px-4 py-2.5">
-            <span className="flex gap-1.5" aria-hidden>
-              <span className="size-2.5 rounded-full bg-line-strong" />
-              <span className="size-2.5 rounded-full bg-line-strong" />
-              <span className="size-2.5 rounded-full bg-line-strong" />
-            </span>
-            <span className="font-mono text-[11px] text-ink-3">proofpay / app</span>
-            <span className="ml-auto hidden font-mono text-[11px] text-ink-4 sm:block">example output · no live AI on this page</span>
-          </div>
-
-          <div className="grid lg:grid-cols-[minmax(0,0.72fr)_minmax(0,1.28fr)]">
-            <div className="border-b border-line p-4 sm:p-6 lg:border-b-0 lg:border-r">
-              <p className="text-xs font-medium uppercase tracking-wider text-ink-3">Payment request</p>
-              <pre className="mt-3 max-h-[280px] overflow-auto whitespace-pre-wrap break-words rounded-lg border border-line bg-surface p-3 font-mono text-[11.5px] leading-relaxed text-ink-2 lg:max-h-none">
+          <div className="grid lg:grid-cols-[minmax(0,0.7fr)_minmax(0,1.3fr)]">
+            <div className="border-b border-line bg-white p-5 sm:p-7 lg:border-b-0 lg:border-r">
+              <p className="text-[13px] text-ink-3">Payment request</p>
+              <pre className="mt-3 max-h-[280px] overflow-auto whitespace-pre-wrap break-words font-mono text-[12px] leading-relaxed text-ink-2 lg:max-h-none">
                 {current.text}
               </pre>
             </div>
-            <div className="min-w-0 p-4 sm:p-6">
+            <div className="min-w-0 p-4 sm:p-7">
               <ResultView key={current.id} data={current.data} preview />
             </div>
           </div>
         </div>
 
-        <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
-          <Link href="/app" className="group inline-flex items-center gap-1.5 text-sm font-medium text-ink underline decoration-line-strong underline-offset-4 hover:decoration-ink">
-            Run these requests with live AI in the demo
-            <IconArrow className="size-3.5 transition-transform group-hover:translate-x-0.5" />
-          </Link>
-          <span className="text-xs text-ink-3">Synthetic suppliers, accounts, and domains.</span>
-        </div>
+        <Link
+          href="/app"
+          className="mt-10 inline-flex text-[15px] font-medium text-ink underline decoration-ink/25 underline-offset-[6px] transition-colors hover:decoration-ink"
+        >
+          Run these requests with live AI in the demo
+        </Link>
       </div>
     </section>
   );
