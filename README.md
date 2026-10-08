@@ -9,7 +9,7 @@ ProofPay is a pre-payment verification console for small businesses. You paste a
 
 | | |
 |---|---|
-| **Live demo** | _add production URL_ |
+| **Live demo** | _add production URL_ (landing page at `/`, verification console at `/app`) |
 | **Demo video** | _add video URL_ |
 | **Evaluation** | [EVALUATION.md](EVALUATION.md) |
 
@@ -104,7 +104,7 @@ The first run scored 23/25 with 2 API errors. Three fixes followed, and the fail
 ```bash
 pnpm install
 cp .env.example .env.local    # add your key
-pnpm dev                      # http://localhost:3000
+pnpm dev                      # landing: http://localhost:3000 · console: /app · records: /suppliers
 ```
 
 | Variable | Purpose |
@@ -121,7 +121,8 @@ src/domain/      security core, pure TypeScript (grounding, normalization, signa
 src/ai/          Extractor interface + AI SDK implementation (the only provider-specific code)
 src/server/      /api/verify handler: validation, extraction, replay rules, verification
 src/fixtures/    synthetic trusted suppliers and demo samples
-src/components/  verification console and result view
+src/app/         (marketing)/ landing page · (product)/ /app console and /suppliers · api/verify
+src/components/  verification console, result view, landing sections
 eval/            labeled evaluation cases and recorded results
 tests/           vitest suites, including adversarial cases
 ```

@@ -15,7 +15,9 @@ AI-assisted pre-payment verification for small businesses. ForgeHacks 2026, AI +
 - `src/ai/`: extraction adapter only (`Extractor` interface; `llm-extractor.ts` uses AI SDK 7 with Vercel AI Gateway model strings). To swap providers, edit this folder and nothing else.
 - `src/server/verify-handler.ts`: the only place that connects AI and domain. `src/app/api/verify/route.ts` just wires the default extractor.
 - `src/fixtures/`: frozen **synthetic** suppliers and samples (`.example` domains). Never present them as real or independently verified.
-- `src/components/`: client UI. `result-view.tsx` is the centerpiece.
+- `src/app/`: `(marketing)/page.tsx` = landing `/` (no AI calls; showcase renders real engine output on stored sample extractions via `components/landing/examples.ts`), `(product)/` = `/app` console + `/suppliers`, `api/verify`.
+- `src/components/`: client UI. `result-view.tsx` is the centerpiece (`preview` mode is used on the landing page). `landing/` = landing sections. Marketing copy must match real behavior — no claims of production readiness, bank integration, or guaranteed prevention.
+- `src/site.ts`: set `githubUrl` once the repo is public (link is hidden while null).
 
 ## AI vs deterministic responsibilities
 - The LLM **only extracts** observed facts with verbatim excerpts. Its schema has no decision, risk, or reference fields.

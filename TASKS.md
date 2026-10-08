@@ -39,6 +39,29 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
 - [ ] **You:** deploy from GitHub with `AI_GATEWAY_API_KEY` set; share the URL so I can verify production
 - [ ] **You:** record the video (OBS), upload, add links to README + Devpost; submit on Devpost
 
+## Phase 3: landing page + product polish (2026-10-08)
+- [x] Routes: `/` landing (route group `(marketing)`), `/app` console and `/suppliers` (`(product)` with a shared header), `/api/verify` unchanged
+- [x] Landing:
+  - nav and hero with an annotated invoice (real sample lines, registered values from fixtures, critical count from the engine)
+  - showcase: the real ResultView on precomputed engine output, 3 tabs, no AI calls
+  - problem section: IBAN character diff from eval case S4
+  - 4-step pipeline (AI vs code)
+  - capabilities: AI vs deterministic split, plus honest limits
+  - CTA and footer with prototype disclosure
+- [x] Design system: Instrument Serif display type, ≠ brand mark and icon, darker ink-3/ink-4 for contrast, global focus-visible ring, smooth scroll only without reduced motion
+- [x] App polish: serif headings, a "Recommended action" line, a "Matched record" line, a "No payment account" key-evidence panel for missing accounts, Ref hidden in preview
+- [x] SEO: title template, description, OG/Twitter metadata, generated `opengraph-image`, `icon.svg`
+- [x] Browser QA (local production build, live gpt-5-mini):
+  - A–F all expected verdicts
+  - showcase tabs via mouse and keyboard
+  - landing CTA → /app
+  - no horizontal overflow at 375 and 768 on /, /app, /suppliers
+  - 375px mobile hero and result checked
+- [x] Screenshots: `submission-assets/screenshots/01–10` (app, refreshed) and `submission-assets/landing/L01–L08`
+- Note: "first click ignored" seen during QA was the automation tool not delivering its first click after navigation. Instrumented: zero pointer events reached the page. Not an app bug; config unchanged.
+- [ ] **You:** deploy (Vercel via GitHub) and send the URL for production verification
+- [ ] GitHub link: hidden until the repo is public (set `githubUrl` in `src/site.ts`)
+
 ## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
 - [x] Larger labeled eval suite (25 cases), with results from real runs only
