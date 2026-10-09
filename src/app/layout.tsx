@@ -9,9 +9,9 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : "http://localhost:3000";
 
-const title = "ProofPay — catch the payment fraud hiding in plain sight";
+const title = "ProofPay — One changed account. One costly mistake.";
 const description =
-  "ProofPay uses AI to extract payment details, compare them against trusted supplier records, and surface suspicious changes before money moves.";
+  "ProofPay reads a payment request, checks the payee and account against the supplier records you already trust, and holds the payment when they don’t match.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
