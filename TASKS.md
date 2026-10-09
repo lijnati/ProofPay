@@ -77,6 +77,19 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
 - [x] Account identifiers shown in groups of 4 when the model returns them unspaced (display only)
 - [x] Screenshots refreshed with the new logo: app 01, 03, 04, 05, 08, 09 and landing L01, L06. App 02, 06, 07, 10 still show the previous header mark.
 
+## Phase 3c: landing redesign, "split mesh" identity (2026-10-08)
+- [x] New landing page (`/`), rebuilt from scratch: navy mesh-gradient field cut by one horizontal line, with the lower band shifted out of line (the logo idea at page scale). It animates once as the HOLD verdict lands.
+- [x] Sections: hero (two-line offset headline, record and request card stack from real engine output), problem (invoice from eval case S4 with the swapped digits marked), 4-step pipeline (AI vs rules), showcase (real ResultView: Held / Needs review / No mismatch), AI-vs-rules split panels, and a closing section that echoes the hero with the footer
+- [x] Type: Geist only; Instrument Serif removed sitewide (app headings now match)
+- [x] Performance: removed the ambient background-position drift (full-layer repaint); only transform and opacity animate; reduced motion disables all landing animation (CSS)
+- [x] Browser QA (prod build, 1568px window plus 375/768/1440 iframes):
+  - no horizontal overflow on /, /app, /suppliers
+  - hero CTA → /app
+  - /api/verify live HOLD still works
+  - fixed: headline wrapping, beam over headline text, CTA below the fold on short screens, tablet orphan "fraud", 768 step layout, showcase heading widow
+- [x] Screenshots: `submission-assets/landing/L01–L08`
+- Note: reduced-motion behaviour is implemented in CSS but was not emulated in the browser during QA.
+
 ## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
 - [x] Larger labeled eval suite (25 cases), with results from real runs only
