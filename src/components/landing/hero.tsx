@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { formatAmount } from "@/domain/normalize";
-import { IconLock, LogoLockup } from "../icons";
+import { IconLock, Logo, LogoLockup } from "../icons";
 import { exampleResponse, sampleText } from "./examples";
 import { FRAME, GRID } from "./grid";
-
 
 export function Nav() {
   return (
@@ -34,19 +33,19 @@ export function Hero() {
     <section aria-labelledby="hero-h" className={`${FRAME} pb-20 pt-12 sm:pt-16 lg:pb-28 lg:pt-20`}>
       <h1
         id="hero-h"
-        className="animate-rise text-[clamp(2.75rem,8.6vw,7.75rem)] font-semibold leading-[0.92] tracking-[-0.055em] text-ink"
+        className="animate-rise text-[clamp(2.75rem,8.4vw,7.5rem)] font-semibold leading-[0.92] tracking-[-0.055em] text-ink"
       >
-        <span className="block">One changed account.</span>
-        <span className="block">One costly mistake.</span>
+        <span className="sm:block">Verify payment details</span>{" "}
+        <span className="sm:block">before money moves.</span>
       </h1>
 
-      <div className={`${GRID} mt-12 gap-y-14 border-t border-ink pt-8 lg:mt-16`}>
-        <div className="col-span-4 md:col-span-8 lg:col-span-4 lg:pr-6">
-          <p className="max-w-[36ch] text-[19px] leading-[1.5] text-ink sm:text-[21px]">
-            ProofPay reads a payment request, checks the payee and account against the supplier records you already
-            trust, and holds the payment when they don’t match.
-          </p>
-          <div className="mt-9 flex flex-wrap items-center gap-x-6 gap-y-4">
+      <div className={`${GRID} mt-12 gap-y-8 border-t border-ink pt-8 lg:mt-14`}>
+        <p className="col-span-4 max-w-[40ch] text-[19px] leading-[1.5] text-ink sm:text-[21px] md:col-span-5 lg:col-span-5">
+          ProofPay reads a payment request, checks the payee and account against the supplier records you already
+          trust, and holds the payment when they don’t match.
+        </p>
+        <div className="col-span-4 md:col-span-3 lg:col-span-4 lg:col-start-9">
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-4">
             <Link
               href="/app"
               className="inline-flex h-12 items-center rounded-md bg-ink px-6 text-[15px] font-medium text-paper transition-[background-color,transform] hover:bg-cobalt active:scale-[0.98]"
@@ -60,15 +59,15 @@ export function Hero() {
               How it works
             </a>
           </div>
-          <p className="mt-10 max-w-[40ch] border-t border-rule pt-4 text-[13px] leading-[1.55] text-graphite">
+          <p className="mt-6 max-w-[40ch] text-[13px] leading-[1.55] text-graphite">
             A hackathon prototype. Suppliers and requests are synthetic, payments are simulated, and nothing connects to
             a bank.
           </p>
         </div>
+      </div>
 
-        <div className="col-span-4 md:col-span-8 lg:col-span-8">
-          <HeroPreview />
-        </div>
+      <div className="mt-14 lg:mt-20">
+        <HeroDesktop />
       </div>
     </section>
   );
@@ -78,12 +77,18 @@ export function Hero() {
 
 const ROW_FIELDS = ["senderEmail", "beneficiaryName", "bankName", "accountIdentifier"] as const;
 const REQUEST_LINES = /^(From|Subject|Amount due|Beneficiary|Bank|IBAN):/;
+const INBOX = ["substituted-account", "unknown-supplier", "legit-northwind"] as const;
+const VERDICT_LABEL = {
+  HOLD: { text: "Held", cls: "text-hold", dot: "bg-hold" },
+  REVIEW: { text: "Needs review", cls: "text-review", dot: "bg-review" },
+  NO_MISMATCH_FOUND: { text: "No mismatch", cls: "text-clear", dot: "bg-clear" },
+} as const;
 
 /**
- * A compact rendering of the real engine result for the synthetic
- * "substituted account" sample. Every value below comes from verifyRequest.
+ * The product as a desktop app window. Every value is the real engine result
+ * for the synthetic samples (stored extractions, no AI call on this page).
  */
-function HeroPreview() {
+function HeroDesktop() {
   const ex = exampleResponse("substituted-account");
   const { result, extraction: x } = ex;
   const rows = ROW_FIELDS.map((f) => result.comparisons.find((c) => c.field === f)!);
@@ -93,77 +98,127 @@ function HeroPreview() {
   const lines = sampleText("substituted-account")
     .split("\n")
     .filter((l) => REQUEST_LINES.test(l));
+  const inbox = INBOX.map((id) => {
+    const r = exampleResponse(id);
+    const e = r.extraction;
+    return {
+      id,
+      who: e.supplierName.value ?? e.senderEmail.value ?? "Unknown sender",
+      invoice: e.invoiceId.value,
+      amount: e.amount.value ? formatAmount(e.amount.value, e.currency.value) : "",
+      verdict: VERDICT_LABEL[r.result.verdict],
+    };
+  });
 
   return (
     <figure
-      aria-label="Example result: a synthetic payment request compared with the trusted supplier record"
-      className="overflow-hidden rounded-[10px] border border-ink/80 bg-surface shadow-[12px_12px_0_0_var(--color-paper-2)]"
+      aria-label="Example result in the ProofPay app: a synthetic payment request held because its account differs from the trusted record"
+      className="relative overflow-hidden rounded-[14px] bg-cobalt"
     >
-      <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1 border-b border-rule px-5 py-3.5 sm:px-6">
-        <p className="text-[14px] font-semibold tracking-[-0.01em]">
-          Invoice {x.invoiceId.value}
-        </p>
-        <p className="font-mono text-[13px] text-graphite">{amount}</p>
-        <p className="ml-auto text-[12px] text-graphite">Synthetic example, stored extraction</p>
+      {/* Menu bar */}
+      <div aria-hidden className="flex h-8 items-center gap-5 bg-black/15 px-4 text-[12.5px] text-white/90">
+        <Logo reversed className="size-[15px]" />
+        <span className="font-semibold">ProofPay</span>
+        <span className="hidden sm:inline">File</span>
+        <span className="hidden sm:inline">Edit</span>
+        <span className="hidden sm:inline">View</span>
+        <span className="hidden sm:inline">Window</span>
+        <span className="ml-auto hidden text-white/70 sm:inline">Synthetic demo data</span>
       </div>
 
-      <div className="grid lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
-        {/* The request as received; cobalt marks what extraction quoted. */}
-        <div className="hidden border-r border-rule bg-paper/60 px-6 py-5 lg:block">
-          <p className="text-[12px] text-graphite">As received</p>
-          <ul className="mt-3 space-y-2 font-mono text-[11.5px] leading-[1.55] text-ink">
-            {lines.map((l) => (
-              <li key={l} className="break-words">
-                {excerpts.has(l) ? (
-                  <span className="underline decoration-cobalt decoration-[1.5px] underline-offset-[3px]">{l}</span>
-                ) : (
-                  l
-                )}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-5 flex items-center gap-2 text-[12px] text-cobalt">
-            <span aria-hidden className="h-[1.5px] w-4 bg-cobalt" />
-            Quoted by AI extraction
-          </p>
-        </div>
-
-        <div className="min-w-0 px-5 py-5 sm:px-6">
-          <div className="flex items-baseline justify-between gap-4 text-[12px] text-graphite">
-            <p>Compared with trusted record</p>
-            <p className="hidden sm:block">{result.matchedSupplier?.legalName}</p>
+      <div className="px-3 pb-3 pt-6 sm:px-10 sm:pb-12 sm:pt-10 lg:px-16 lg:pb-16 lg:pt-12">
+        {/* App window */}
+        <div className="overflow-hidden rounded-[10px] bg-surface shadow-[0_40px_80px_-30px_rgba(5,12,40,0.6),0_0_0_1px_rgba(0,0,0,0.12)]">
+          <div className="relative flex h-10 items-center border-b border-rule bg-paper px-4">
+            <span aria-hidden className="relative z-10 flex gap-2">
+              <span className="size-3 rounded-full bg-[#ff5f57] ring-1 ring-black/10" />
+              <span className="size-3 rounded-full bg-[#febc2e] ring-1 ring-black/10" />
+              <span className="size-3 rounded-full bg-[#28c840] ring-1 ring-black/10" />
+            </span>
+            <p className="absolute inset-x-0 text-center text-[12.5px] font-medium text-graphite">ProofPay — Verify</p>
           </div>
-          <ul className="mt-3 border-t border-rule">
-            {rows.map((r, i) => (
-              <li
-                key={r.field}
-                className="row-in grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b border-rule py-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
-                style={{ animationDelay: `${450 + i * 180}ms` }}
-              >
-                <span className="text-[13px] text-graphite">{r.label}</span>
-                <span className="col-span-2 row-start-2 min-w-0 font-mono text-[12.5px] leading-[1.45] sm:col-span-1 sm:row-start-auto">
-                  <span className="block break-words text-ink">{r.observed?.value}</span>
-                  <span className="mt-1 block break-words text-graphite">
-                    <span className="font-sans text-[11.5px]">Record </span>
-                    {r.expected?.value}
-                  </span>
-                </span>
-                <span className="text-[12px] font-medium text-hold">
-                  {r.status === "mismatch" ? "Differs" : ""}
-                </span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
 
-      <div className="verdict-in flex flex-wrap items-center gap-x-4 gap-y-1 bg-hold px-5 py-4 text-white sm:px-6">
-        <IconLock className="size-[18px]" />
-        <p className="text-[15px] font-semibold">Hold</p>
-        <p className="text-[13.5px] text-white/85">
-          {critical} critical mismatches with registered records
-        </p>
-        <p className="w-full text-[12.5px] text-white/75 sm:ml-auto sm:w-auto">Simulated release locked</p>
+          <div className="grid lg:grid-cols-[15rem_minmax(0,0.9fr)_minmax(0,1.25fr)]">
+            {/* Sidebar: incoming requests with their verdicts */}
+            <aside className="hidden border-r border-rule bg-paper/70 lg:block">
+              <p className="px-4 pb-2 pt-4 text-[12px] font-medium text-graphite">Payment requests</p>
+              <ul className="px-2 pb-3">
+                {inbox.map((m, i) => (
+                  <li
+                    key={m.id}
+                    className={`rounded-md px-3 py-2.5 ${i === 0 ? "bg-surface shadow-[0_0_0_1px_var(--color-rule)]" : ""}`}
+                  >
+                    <p className="truncate text-[13px] font-medium text-ink">{m.who}</p>
+                    <p className="mt-0.5 flex items-center gap-2 text-[12px] text-graphite">
+                      <span className="truncate">{m.invoice}</span>
+                      <span className="ml-auto shrink-0 font-mono text-[11.5px]">{m.amount}</span>
+                    </p>
+                    <p className={`mt-1.5 flex items-center gap-1.5 text-[12px] font-medium ${m.verdict.cls}`}>
+                      <span className={`size-1.5 rounded-full ${m.verdict.dot}`} />
+                      {m.verdict.text}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </aside>
+
+            {/* The request as received; cobalt marks what extraction quoted. */}
+            <div className="hidden border-r border-rule px-6 py-5 lg:block">
+              <div className="flex items-baseline justify-between gap-3">
+                <p className="text-[14px] font-semibold tracking-[-0.01em]">Invoice {x.invoiceId.value}</p>
+                <p className="font-mono text-[12.5px] text-graphite">{amount}</p>
+              </div>
+              <ul className="mt-4 space-y-2 font-mono text-[11.5px] leading-[1.55] text-ink">
+                {lines.map((l) => (
+                  <li key={l} className="break-words">
+                    {excerpts.has(l) ? (
+                      <span className="underline decoration-cobalt decoration-[1.5px] underline-offset-[3px]">{l}</span>
+                    ) : (
+                      l
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-5 flex items-center gap-2 text-[12px] text-cobalt">
+                <span aria-hidden className="h-[1.5px] w-4 bg-cobalt" />
+                Quoted by AI extraction
+              </p>
+            </div>
+
+            <div className="min-w-0 px-4 py-5 sm:px-6">
+              <div className="flex items-baseline justify-between gap-4 text-[12px] text-graphite">
+                <p>Compared with trusted record</p>
+                <p className="hidden sm:block">{result.matchedSupplier?.legalName}</p>
+              </div>
+              <ul className="mt-3 border-t border-rule">
+                {rows.map((r, i) => (
+                  <li
+                    key={r.field}
+                    className="row-in grid grid-cols-[minmax(0,1fr)_auto] gap-x-3 gap-y-1 border-b border-rule py-3 sm:grid-cols-[7rem_minmax(0,1fr)_auto]"
+                    style={{ animationDelay: `${450 + i * 180}ms` }}
+                  >
+                    <span className="text-[13px] text-graphite">{r.label}</span>
+                    <span className="col-span-2 row-start-2 min-w-0 font-mono text-[12.5px] leading-[1.45] sm:col-span-1 sm:row-start-auto">
+                      <span className="block break-words text-ink">{r.observed?.value}</span>
+                      <span className="mt-1 block break-words text-graphite">
+                        <span className="font-sans text-[11.5px]">Record </span>
+                        {r.expected?.value}
+                      </span>
+                    </span>
+                    <span className="text-[12px] font-medium text-hold">{r.status === "mismatch" ? "Differs" : ""}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          <div className="verdict-in flex flex-wrap items-center gap-x-4 gap-y-1 bg-hold px-4 py-3.5 text-white sm:px-6">
+            <IconLock className="size-[18px]" />
+            <p className="text-[15px] font-semibold">Hold</p>
+            <p className="text-[13.5px] text-white/85">{critical} critical mismatches with registered records</p>
+            <p className="w-full text-[12.5px] text-white/75 sm:ml-auto sm:w-auto">Simulated release locked</p>
+          </div>
+        </div>
       </div>
     </figure>
   );
