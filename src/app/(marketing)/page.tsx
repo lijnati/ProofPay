@@ -1,6 +1,6 @@
 import { exampleResponse, sampleText } from "@/components/landing/examples";
-import { Hero } from "@/components/landing/hero";
-import { Capabilities, Closing, HowItWorks, Problem } from "@/components/landing/sections";
+import { Hero, Nav } from "@/components/landing/hero";
+import { Capabilities, Closing, Footer, HowItWorks, Problem } from "@/components/landing/sections";
 import { Showcase, type ShowcaseExample } from "@/components/landing/showcase";
 
 const SHOWCASE: { id: string; tab: string }[] = [
@@ -17,13 +17,17 @@ export default function LandingPage() {
     data: exampleResponse(id),
   }));
   return (
-    <main className="bg-paper">
-      <Hero />
-      <Problem />
-      <HowItWorks />
-      <Showcase examples={examples} />
-      <Capabilities />
-      <Closing />
-    </main>
+    <div className="bg-paper text-ink">
+      <Nav />
+      <main>
+        <Hero />
+        <Problem />
+        <HowItWorks />
+        <Showcase examples={examples} />
+        <Capabilities />
+        <Closing />
+      </main>
+      <Footer />
+    </div>
   );
 }

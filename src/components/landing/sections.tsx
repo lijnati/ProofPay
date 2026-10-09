@@ -2,68 +2,79 @@ import Link from "next/link";
 import { TRUSTED_SUPPLIERS } from "@/fixtures/suppliers";
 import { SITE } from "@/site";
 import { IconGitHub, IconLock, LogoLockup } from "../icons";
-import { SplitField } from "./split-field";
+import { exampleResponse, sampleText } from "./examples";
+import { FRAME, GRID } from "./grid";
+
+const H2 = "text-balance text-[clamp(2.25rem,4.6vw,4rem)] font-semibold leading-[0.98] tracking-[-0.045em] text-ink";
 
 /* ------------------------------------------------------------------ Problem */
 
-/** Evaluation case S4 (synthetic): an otherwise genuine invoice with two IBAN digits swapped. */
+/** Margin notes keyed to lines of the synthetic "substituted account" email. */
+const NOTES: { match: string[]; note: string }[] = [
+  {
+    match: ["From:"],
+    note: "A lookalike sender. The supplier’s registered domain is northwind‑packaging.example; this one adds “‑billing”.",
+  },
+  { match: ["Subject:"], note: "The pretext. New bank details, announced as routine housekeeping." },
+  { match: ["Due: today"], note: "A deadline, so nobody stops to check." },
+  { match: ["Beneficiary:", "Bank:", "IBAN:"], note: "A different account holder, at a different bank, with a new account number." },
+  { match: ["unable to take calls"], note: "It rules out the call-back, the one step that would expose the change." },
+];
+
 export function Problem() {
-  const nw = TRUSTED_SUPPLIERS.find((s) => s.id === "sup_northwind")!;
-  const registered = nw.account.value; // GB82 WEST 1234 5698 7654 32
-  const invoiceIban = registered.replace(/32$/, "23");
-  const head = invoiceIban.slice(0, -2);
-  const tail = invoiceIban.slice(-2);
+  const lines = sampleText("substituted-account").split("\n");
+  const noteFor = (line: string) => NOTES.findIndex((n) => n.match.some((m) => line.includes(m)));
 
   return (
-    <section aria-labelledby="problem-h" className="bg-paper">
-      <div className="mx-auto grid max-w-[1320px] grid-cols-[minmax(0,1fr)] items-center gap-16 px-5 py-28 sm:px-8 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)] lg:py-36">
-        <div>
-          <h2 id="problem-h" className="text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] text-ink sm:text-[56px]">
-            An invoice can be right in every way but one.
-          </h2>
-          <p className="mt-6 max-w-[30rem] text-[17px] leading-[1.6] text-ink-3">
-            Same supplier, same format, same amount. Only the account the money goes to has changed, and that is the
-            line nobody rereads.
-          </p>
+    <section id="problem" aria-labelledby="problem-h" className="border-t border-rule">
+      <div className={`${FRAME} ${GRID} gap-y-12 py-24 lg:py-32`}>
+        <div className="col-span-4 md:col-span-8 lg:col-span-4">
+          <div className="lg:sticky lg:top-12">
+            <h2 id="problem-h" className={H2}>
+              Payment redirection starts with an ordinary email.
+            </h2>
+            <p className="mt-6 max-w-[38ch] text-[17px] leading-[1.6] text-graphite">
+              The attacker copies a real supplier’s invoice, changes where the money goes, and adds reasons not to
+              check. Everything looks familiar except the one line that decides where the money lands.
+            </p>
+            <p className="mt-6 text-[13px] text-graphite">A synthetic request from the ProofPay demo set.</p>
+          </div>
         </div>
 
-        <figure className="relative" aria-label="Synthetic invoice with a changed account number">
-          <div className="rounded-[20px] bg-white p-7 shadow-[0_1px_0_rgba(10,20,40,0.04),0_30px_60px_-30px_rgba(10,20,40,0.25)] ring-1 ring-black/5 sm:p-10">
-            <div className="flex flex-wrap items-start justify-between gap-4">
-              <div>
-                <p className="text-[18px] font-semibold tracking-[-0.02em]">{nw.legalName}</p>
-                <p className="mt-1 text-[13px] text-ink-3">@{nw.senderDomains[0]}</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[13px] text-ink-3">Invoice</p>
-                <p className="font-mono text-[14px]">NWP-2026-0458</p>
-              </div>
-            </div>
-            <div className="mt-8 flex items-baseline justify-between border-y border-line py-4 text-[15px]">
-              <span>October cartons</span>
-              <span className="font-mono">GBP 5,140.00</span>
-            </div>
-            <dl className="mt-6 grid grid-cols-[6.5rem_minmax(0,1fr)] gap-y-3 text-[14px]">
-              <dt className="text-ink-3">Pay to</dt>
-              <dd>{nw.beneficiaryName}</dd>
-              <dt className="text-ink-3">Bank</dt>
-              <dd>{nw.account.bankName}</dd>
-              <dt className="text-ink-3">IBAN</dt>
-              <dd className="break-all font-mono text-[15px]">
-                {head}
-                <mark className="rounded-[4px] bg-[#c2362c] px-0.5 text-white">{tail}</mark>
-              </dd>
-            </dl>
+        <figure
+          aria-label="Annotated synthetic payment request"
+          className="col-span-4 md:col-span-8 lg:col-span-7 lg:col-start-6"
+        >
+          <div className="rounded-[10px] border border-ink/80 bg-surface">
+            <ol className="py-4 font-mono text-[12.5px] leading-[1.6] sm:text-[13px]">
+              {lines.map((line, i) => {
+                const n = noteFor(line);
+                const first = n >= 0 && noteFor(lines[i - 1] ?? "") !== n;
+                if (!line.trim()) return <li key={i} aria-hidden className="h-4" />;
+                return (
+                  <li
+                    key={i}
+                    className={`grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-2 px-4 py-1 sm:px-6 ${n >= 0 ? "bg-paper-2" : ""}`}
+                  >
+                    <span className="pt-px font-sans text-[11px] font-semibold text-ink">
+                      {first && (
+                        <span className="grid size-5 place-items-center rounded-full bg-ink text-paper">{n + 1}</span>
+                      )}
+                    </span>
+                    <span className={`break-words ${n >= 0 ? "text-ink" : "text-graphite"}`}>{line}</span>
+                  </li>
+                );
+              })}
+            </ol>
           </div>
-          <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl bg-abyss px-5 py-4 text-[13px] text-white sm:ml-16">
-            <span className="inline-flex items-center gap-2 font-semibold text-[#ff8a80]">
-              <IconLock className="size-4" /> Held by ProofPay
-            </span>
-            <span className="text-white/70">
-              Your record ends <span className="font-mono text-white">{registered.slice(-7)}</span>
-            </span>
-          </div>
-          <figcaption className="mt-3 text-[12px] text-ink-4 sm:ml-16">Synthetic invoice from the ProofPay evaluation set.</figcaption>
+          <ol className="mt-8 grid gap-x-8 gap-y-6 sm:grid-cols-2">
+            {NOTES.map((n, i) => (
+              <li key={n.note} className="grid grid-cols-[1.75rem_minmax(0,1fr)] gap-x-2 border-t border-ink pt-3">
+                <span className="text-[14px] font-semibold tabular-nums">{i + 1}</span>
+                <p className="max-w-[40ch] text-[15px] leading-[1.55] text-ink">{n.note}</p>
+              </li>
+            ))}
+          </ol>
         </figure>
       </div>
     </section>
@@ -72,105 +83,174 @@ export function Problem() {
 
 /* ------------------------------------------------------------- How it works */
 
-const STEPS = [
-  { title: "Extract", body: "AI reads the request and quotes the payee, account, and amount word for word.", who: "AI", token: "GB33 HRBR 6016 1331…" },
-  { title: "Reference", body: "Your trusted supplier records, set up when you onboarded them, are the source of truth.", who: "Records", token: "GB82 WEST 1234 5698…" },
-  { title: "Verify", body: "Deterministic rules check every quote against the record and keep the evidence.", who: "Rules", token: "account ≠ record" },
-  { title: "Hold", body: "A mismatch is held in a simulated approval step until someone confirms it.", who: "Rules", token: "release locked" },
-];
-
 export function HowItWorks() {
-  return (
-    <section id="how" aria-labelledby="how-h" className="relative overflow-hidden bg-abyss text-white">
-      <div aria-hidden className="pointer-events-none absolute inset-0 [background:radial-gradient(40%_60%_at_0%_100%,rgb(31_179_154/0.35),transparent_70%),radial-gradient(35%_50%_at_100%_0%,rgb(58_109_240/0.35),transparent_70%)]" />
-      <div className="relative mx-auto max-w-[1320px] px-5 py-28 sm:px-8 lg:py-36">
-        <h2 id="how-h" className="max-w-[18ch] text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[56px]">
-          Four steps between a request and a payment.
-        </h2>
+  const ex = exampleResponse("substituted-account");
+  const account = ex.result.findings.find((f) => f.code === "ACCOUNT_MISMATCH")!;
+  const firstSentence = account.explanation.split(". ")[0] + ".";
 
-        <ol className="relative mt-20 grid gap-12 lg:grid-cols-4 lg:gap-8">
-          {/* The track the request travels along */}
-          <div aria-hidden className="absolute left-0 right-0 top-[11px] hidden h-px bg-gradient-to-r from-cyan/70 via-white/25 to-[#ff8a80]/70 lg:block" />
-          {STEPS.map((s, i) => (
-            <li key={s.title} className="relative">
-              <span
-                className={`relative z-10 grid size-6 place-items-center rounded-full text-[11px] font-semibold ${
-                  s.who === "AI" ? "bg-cyan text-abyss" : i === 3 ? "bg-[#ff8a80] text-abyss" : "bg-white text-abyss"
-                }`}
-              >
-                {i + 1}
-              </span>
-              <div className="mt-6 flex items-baseline gap-3">
-                <h3 className="text-[24px] font-semibold tracking-[-0.03em]">{s.title}</h3>
-                <span className={`text-[12px] ${s.who === "AI" ? "text-cyan" : "text-white/50"}`}>{s.who}</span>
+  const steps = [
+    {
+      title: "Extract",
+      by: "AI",
+      body: "The model reads the request and quotes the sender, payee, bank, account, and amount word for word. A value it can’t point to in the text is discarded.",
+      specimen: (
+        <>
+          <p className="font-mono text-[12.5px] leading-[1.5] text-ink">
+            <span className="underline decoration-cobalt decoration-[1.5px] underline-offset-[3px]">
+              “{account.observed?.excerpt}”
+            </span>
+          </p>
+          <p className="mt-3 text-[12px] text-cobalt">Found in the source text</p>
+        </>
+      ),
+    },
+    {
+      title: "Compare",
+      by: "Rules",
+      body: "Each quoted value is checked against the trusted record for that supplier: sender domain, payee, bank, and account.",
+      specimen: (
+        <dl className="space-y-2 font-mono text-[12.5px] leading-[1.45]">
+          <div>
+            <dt className="font-sans text-[12px] text-graphite">Request</dt>
+            <dd className="text-ink">{account.observed?.value}</dd>
+          </div>
+          <div>
+            <dt className="font-sans text-[12px] text-graphite">Record</dt>
+            <dd className="text-ink">{account.expected?.value}</dd>
+          </div>
+        </dl>
+      ),
+    },
+    {
+      title: "Explain",
+      by: "Rules",
+      body: "Each finding says what differs, where the value came from, and what to do next, in fixed wording rather than generated text.",
+      specimen: <p className="text-[13.5px] leading-[1.55] text-ink">{firstSentence}</p>,
+    },
+    {
+      title: "Protect",
+      by: "Rules",
+      body: "A critical mismatch holds the payment in a simulated approval step. A request that needs review can’t be released without a reviewer note.",
+      specimen: (
+        <p className="flex items-center gap-2 text-[13.5px] font-medium text-hold">
+          <IconLock className="size-4" /> On hold, release locked
+        </p>
+      ),
+    },
+  ];
+
+  return (
+    <section id="how" aria-labelledby="how-h" className="border-t border-rule bg-paper-2/60">
+      <div className={`${FRAME} py-24 lg:py-32`}>
+        <div className={`${GRID} gap-y-6`}>
+          <h2 id="how-h" className={`${H2} col-span-4 md:col-span-6 lg:col-span-6`}>
+            Extract, compare, explain, protect.
+          </h2>
+          <p className="col-span-4 max-w-[40ch] self-end text-[17px] leading-[1.6] text-graphite md:col-span-6 lg:col-span-4 lg:col-start-9">
+            Only the first step uses AI, and it never sees the verdict. Text hidden in an invoice can’t argue its way
+            past the rules.
+          </p>
+        </div>
+
+        <ol className="mt-16 grid border-t border-ink md:grid-cols-2 lg:mt-20 lg:grid-cols-4">
+          {steps.map((s, i) => (
+            <li
+              key={s.title}
+              className={`flex flex-col border-b border-rule py-8 lg:border-b-0 lg:px-6 ${
+                i % 2 ? "md:border-l md:pl-6" : "md:pr-6"
+              } ${i === 0 ? "lg:pl-0" : "lg:border-l"} ${i === 3 ? "lg:pr-0" : ""}`}
+            >
+              <div className="flex items-baseline justify-between text-[13px]">
+                <span className="font-semibold tabular-nums text-ink">{i + 1}</span>
+                <span className={s.by === "AI" ? "font-medium text-cobalt" : "text-graphite"}>{s.by}</span>
               </div>
-              <p className="mt-3 max-w-[30ch] text-[15px] leading-[1.6] text-white/65">{s.body}</p>
-              <p className="mt-5 inline-block rounded-md border border-white/10 bg-white/5 px-2.5 py-1.5 font-mono text-[12px] text-white/80">
-                {s.token}
-              </p>
+              <h3 className="mt-10 text-[34px] font-semibold leading-none tracking-[-0.04em] lg:text-[40px]">{s.title}</h3>
+              <p className="mt-4 max-w-[34ch] text-[15px] leading-[1.6] text-graphite lg:min-h-[8em]">{s.body}</p>
+              <div className="mt-8 border-t border-rule pt-4">{s.specimen}</div>
             </li>
           ))}
         </ol>
-        <p className="mt-16 max-w-[52ch] text-[14px] leading-[1.6] text-white/50">
-          Only the first step uses AI, and it never sees the verdict. Text hidden inside an invoice can’t talk its way
-          past the rules.
-        </p>
       </div>
     </section>
   );
 }
 
-/* ------------------------------------------------------- AI reads, rules decide */
+/* ------------------------------------------------------------ Capabilities */
 
-const AI_DOES = [
-  ["Reads any format", "Emails, forwarded threads, invoice tables, chat messages."],
-  ["Quotes its evidence", "Every value comes with the exact words it was taken from."],
-  ["Treats the invoice as data", "Instructions aimed at AI tools are flagged as findings."],
-];
-const RULES_DECIDE = [
-  ["Trusted supplier comparison", "Account, payee, bank, and sender checked against your record."],
-  ["Grounded or discarded", "A value that isn’t in the text is thrown away, not trusted."],
-  ["Lookalike senders", "Swapped letters, extra words, and other domain endings are caught."],
-  ["Evidence for every finding", "The request’s value next to the record’s value, with its source."],
-  ["Simulated payment holds", "Held requests stay locked; unclear ones need a reviewer note."],
+const SPEC: { group: string; tone: "ai" | "rules" | "limit"; items: [string, string][] }[] = [
+  {
+    group: "The AI reads",
+    tone: "ai",
+    items: [
+      ["Any written format", "Pasted emails, forwarded threads, invoice text, and chat messages."],
+      ["Verbatim evidence", "Every extracted value carries the exact words it was taken from."],
+      ["The invoice as data", "Instructions aimed at AI tools are flagged as findings and can’t change the result."],
+    ],
+  },
+  {
+    group: "The rules decide",
+    tone: "rules",
+    items: [
+      ["Trusted record comparison", "Account, payee, bank, and sender checked against the supplier you registered."],
+      ["Grounded or discarded", "A value that doesn’t appear in the request text is treated as missing."],
+      ["Lookalike senders", "Extra words, swapped letters, and different domain endings are flagged."],
+      ["Unknown suppliers", "A request from a supplier with no trusted record never passes on its own."],
+      ["Three verdicts", "Hold, needs review, or no mismatch found. Never “verified legitimate”."],
+    ],
+  },
+  {
+    group: "Out of scope",
+    tone: "limit",
+    items: [
+      ["Email authentication", "SPF, DKIM, and DMARC aren’t checked. Only the pasted text is inspected."],
+      ["Account ownership", "ProofPay doesn’t contact banks. Accounts are compared only with your records."],
+      ["Real payments", "Releases are simulated. Nothing is connected to a bank and no money moves."],
+    ],
+  },
 ];
 
 export function Capabilities() {
   return (
-    <section id="capabilities" aria-labelledby="cap-h" className="bg-paper">
-      <div className="mx-auto max-w-[1320px] px-5 py-28 sm:px-8 lg:py-36">
-        <h2 id="cap-h" className="max-w-[16ch] text-[40px] font-semibold leading-[1.02] tracking-[-0.04em] sm:text-[56px]">
-          The AI reads. The rules decide.
-        </h2>
-        <div className="mt-16 grid gap-4 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] lg:items-start">
-          <div className="rounded-3xl bg-abyss p-8 text-white sm:p-10">
-            <p className="text-[14px] text-cyan">What the AI does</p>
-            <ul className="mt-8 space-y-7">
-              {AI_DOES.map(([t, d]) => (
-                <li key={t}>
-                  <p className="text-[19px] font-medium tracking-[-0.02em]">{t}</p>
-                  <p className="mt-1.5 text-[14px] leading-[1.6] text-white/60">{d}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-          {/* Offset from the AI panel, like the halves of the mark. */}
-          <div className="rounded-3xl bg-white p-8 ring-1 ring-black/5 sm:p-10 lg:mt-14">
-            <p className="text-[14px] text-teal">What the rules decide</p>
-            <ul className="mt-8 grid gap-x-10 gap-y-7 sm:grid-cols-2">
-              {RULES_DECIDE.map(([t, d]) => (
-                <li key={t}>
-                  <p className="text-[19px] font-medium tracking-[-0.02em]">{t}</p>
-                  <p className="mt-1.5 text-[14px] leading-[1.6] text-ink-3">{d}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
+    <section id="capabilities" aria-labelledby="cap-h" className="border-t border-rule">
+      <div className={`${FRAME} py-24 lg:py-32`}>
+        <div className={GRID}>
+          <h2 id="cap-h" className={`${H2} col-span-4 md:col-span-8 lg:col-span-8`}>
+            The AI reads.
+            <br />
+            The rules decide.
+          </h2>
         </div>
-        <p className="mt-12 max-w-[64ch] text-[13px] leading-[1.6] text-ink-4">
-          ProofPay doesn’t check email authentication or confirm account ownership with a bank. A clean result means no
-          mismatch against your records, not a guarantee.
-        </p>
+
+        <div className="mt-16 lg:mt-20">
+          {SPEC.map((g) => (
+            <div key={g.group} className={`${GRID} border-t border-ink py-6 lg:py-8`}>
+              <h3
+                className={`col-span-4 mb-4 text-[15px] font-semibold md:col-span-8 lg:col-span-3 lg:mb-0 ${
+                  g.tone === "ai" ? "text-cobalt" : g.tone === "limit" ? "text-graphite" : "text-ink"
+                }`}
+              >
+                {g.group}
+              </h3>
+              <dl className="col-span-4 md:col-span-8 lg:col-span-9">
+                {g.items.map(([t, d]) => (
+                  <div
+                    key={t}
+                    className="grid grid-cols-1 gap-y-1 border-b border-rule py-4 first:pt-0 last:border-b-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_minmax(0,1.25fr)] md:gap-x-6"
+                  >
+                    <dt
+                      className={`text-[20px] font-medium tracking-[-0.02em] sm:text-[22px] ${
+                        g.tone === "limit" ? "text-graphite" : "text-ink"
+                      }`}
+                    >
+                      {t}
+                    </dt>
+                    <dd className="max-w-[48ch] text-[15px] leading-[1.6] text-graphite md:pt-1">{d}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );
@@ -180,42 +260,57 @@ export function Capabilities() {
 
 export function Closing() {
   return (
-    <section aria-labelledby="cta-h" className="relative overflow-hidden bg-abyss text-white">
-      <SplitField split={0.55} />
-      <div className="relative z-10 mx-auto max-w-[1320px] px-5 pb-16 pt-32 sm:px-8 lg:pt-44">
-        <h2 id="cta-h" className="text-[44px] font-semibold leading-[0.98] tracking-[-0.045em] sm:text-[72px] lg:text-[88px]">
-          <span className="block">Know what you’re paying.</span>
-          <span className="block text-white/75 sm:pl-[0.9em]">Before you pay.</span>
-        </h2>
-        <Link
-          href="/app"
-          className="mt-12 inline-flex h-12 items-center rounded-full bg-white px-7 text-[15px] font-medium text-abyss shadow-[0_10px_30px_-10px_rgba(63,208,224,0.6)] transition-[background-color,transform] hover:-translate-y-px hover:bg-white/95 focus-visible:outline-white"
+    <section aria-labelledby="cta-h" className="bg-cobalt text-white">
+      <div className={`${FRAME} py-24 lg:py-36`}>
+        <h2
+          id="cta-h"
+          className="text-[clamp(2.75rem,8vw,7.25rem)] font-semibold leading-[0.92] tracking-[-0.055em]"
         >
-          Launch Interactive Demo
-        </Link>
-
-        <footer className="mt-32 border-t border-white/15 pt-8 lg:mt-44">
-          <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
-            <Link href="/" aria-label="ProofPay home" className="rounded-md">
-              <LogoLockup reversed />
-            </Link>
-            <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-2 text-[14px] text-white/70">
-              <Link href="/app" className="hover:text-white">Demo</Link>
-              <Link href="/suppliers" className="hover:text-white">Trusted records</Link>
-              <a href="#how" className="hover:text-white">How it works</a>
-              {SITE.githubUrl && (
-                <a href={SITE.githubUrl} className="inline-flex items-center gap-1.5 hover:text-white">
-                  <IconGitHub className="size-4" /> GitHub
-                </a>
-              )}
-            </nav>
-          </div>
-          <p className="mt-6 max-w-[70ch] text-[12px] leading-[1.6] text-white/45">
-            Built for {SITE.hackathon}, {SITE.track} track. A prototype using synthetic supplier records and simulated
-            payments. It is not connected to any bank, and no money moves.
+          <span className="block">Know what you’re paying.</span>
+          <span className="block">Before you pay.</span>
+        </h2>
+        <div className={`${GRID} mt-14 gap-y-8 border-t border-white/40 pt-8`}>
+          <p className="col-span-4 max-w-[40ch] text-[17px] leading-[1.6] text-white/85 md:col-span-5 lg:col-span-5">
+            Paste a payment request, or run one of the synthetic examples, and see what ProofPay holds and why.
           </p>
-        </footer>
+          <div className="col-span-4 md:col-span-3 md:justify-self-end lg:col-span-4 lg:col-start-9">
+            <Link
+              href="/app"
+              className="inline-flex h-12 items-center rounded-md bg-paper px-6 text-[15px] font-medium text-ink transition-[background-color,transform] hover:bg-white active:scale-[0.98] focus-visible:outline-white"
+            >
+              Open the demo
+            </Link>
+          </div>
+        </div>
       </div>
     </section>
+  );
+}
+
+export function Footer() {
+  const suppliers = TRUSTED_SUPPLIERS.length;
+  return (
+    <footer className={`${FRAME} py-12`}>
+      <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+        <Link href="/" aria-label="ProofPay home" className="self-start rounded-md">
+          <LogoLockup />
+        </Link>
+        <nav aria-label="Footer" className="flex flex-wrap gap-x-7 gap-y-2 text-[14px] text-graphite">
+          <Link href="/app" className="hover:text-ink">Demo</Link>
+          <Link href="/suppliers" className="hover:text-ink">Trusted records</Link>
+          <a href="#how" className="hover:text-ink">How it works</a>
+          {SITE.githubUrl && (
+            <a href={SITE.githubUrl} className="inline-flex items-center gap-1.5 hover:text-ink">
+              <IconGitHub className="size-4" /> GitHub
+            </a>
+          )}
+        </nav>
+      </div>
+      <p className="mt-8 max-w-[72ch] border-t border-rule pt-6 text-[13px] leading-[1.6] text-graphite">
+        Built for {SITE.hackathon}, {SITE.track} track. A prototype with {suppliers} synthetic supplier records and
+        simulated payments. It isn’t connected to any bank, no money moves, and a clean result means no mismatch with
+        your records, not a guarantee.
+      </p>
+    </footer>
   );
 }
