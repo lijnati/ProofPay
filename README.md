@@ -2,7 +2,7 @@
 
 # ProofPay
 
-**Scammers can fake an invoice. ProofPay checks what they can't fake: your previously verified payment records.**
+**Verify payment details before money moves.** Scammers can fake an invoice. ProofPay checks what they can't fake: your previously verified payment records.
 
 ProofPay is a pre-payment verification console for small businesses. You paste a payment request (an email or invoice text). AI extracts who is asking to be paid, where, and how much, quoting each fact word for word. Deterministic code then compares those facts with the supplier records you verified earlier. A changed account or payee **holds** the payment, with the evidence side by side.
 
@@ -44,6 +44,20 @@ The defense isn't "does this email look suspicious?" It's **"does this payment r
 | Legitimate | Unknown supplier | Prompt injection |
 |---|---|---|
 | ![](submission-assets/screenshots/03-no-mismatch-legitimate.jpg) | ![](submission-assets/screenshots/05-review-unknown-supplier.jpg) | ![](submission-assets/screenshots/04-hold-prompt-injection.jpg) |
+
+## Landing page
+
+The landing page at `/` explains the product with the product itself. Every result on it is the real rules engine running on the synthetic samples with their stored reference extractions, so the page makes no AI calls and says so.
+
+![Landing page hero: the ProofPay window holding a request whose account differs from the trusted record](submission-assets/landing/L01-hero.jpg)
+
+- **Hero:** the ProofPay app as a desktop window. A sidebar of synthetic requests with their verdicts (Held, Needs review, No mismatch); the held request with the lines the AI quoted; its sender, payee, bank, and account compared with the trusted record; and the HOLD bar.
+- **The problem:** the full synthetic "changed bank details" email, annotated with the tactics it uses: lookalike domain, new-account pretext, deadline, and a refusal to take calls.
+- **How it works:** Extract (AI) → Compare → Explain → Protect (rules), each with a real snippet from the engine.
+- **Example results:** the console's real result screen for three samples, switchable by tab.
+- **Capabilities:** what the AI reads, what the rules decide, and what is out of scope (email authentication, account ownership, real payments).
+
+Design: Neo-Swiss editorial. Warm paper, near-black type, and one cobalt accent that also marks AI-extracted text. Geist throughout, Geist Mono for account numbers and excerpts. The full set of section and mobile/tablet screenshots is in [`submission-assets/landing/`](submission-assets/landing).
 
 ## Why AI, and why not *only* AI
 
@@ -124,7 +138,7 @@ src/ai/          Extractor interface + AI SDK implementation (the only provider-
 src/server/      /api/verify handler: validation, extraction, replay rules, verification
 src/fixtures/    synthetic trusted suppliers and demo samples
 src/app/         (marketing)/ landing page · (product)/ /app console and /suppliers · api/verify
-src/components/  verification console, result view, landing sections
+src/components/  verification console, result view, landing/ (hero window, sections, example results)
 eval/            labeled evaluation cases and recorded results
 tests/           vitest suites, including adversarial cases
 ```

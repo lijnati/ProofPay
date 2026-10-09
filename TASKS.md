@@ -57,7 +57,7 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
   - landing CTA → /app
   - no horizontal overflow at 375 and 768 on /, /app, /suppliers
   - 375px mobile hero and result checked
-- [x] Screenshots: `submission-assets/screenshots/01–10` (app, refreshed) and `submission-assets/landing/L01–L08`
+- [x] Screenshots: `submission-assets/screenshots/01–10` (app, refreshed) and `submission-assets/landing/L01–L07`
 - Note: "first click ignored" seen during QA was the automation tool not delivering its first click after navigation. Instrumented: zero pointer events reached the page. Not an app bug; config unchanged.
 - [ ] **You:** deploy (Vercel via GitHub) and send the URL for production verification
 - [ ] GitHub link: hidden until the repo is public (set `githubUrl` in `src/site.ts`)
@@ -87,7 +87,7 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
   - hero CTA → /app
   - /api/verify live HOLD still works
   - fixed: headline wrapping, beam over headline text, CTA below the fold on short screens, tablet orphan "fraud", 768 step layout, showcase heading widow
-- [x] Screenshots: `submission-assets/landing/L01–L08`
+- [x] Screenshots: `submission-assets/landing/L01–L07`
 - Note: reduced-motion behaviour is implemented in CSS but was not emulated in the browser during QA.
 
 ## P1 (only after P0 deployed)
