@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "ProofPay — One changed account. One costly mistake.";
+export const alt = "ProofPay — Verify payment details before money moves";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -47,8 +47,8 @@ export default function OpengraphImage() {
               letterSpacing: -5.5,
             }}
           >
-            <span>One changed account.</span>
-            <span>One costly mistake.</span>
+            <span>Verify payment details</span>
+            <span>before money moves.</span>
           </div>
 
           <div style={{ display: "flex", flexDirection: "column", marginTop: "auto", marginBottom: 48, borderTop: `2px solid ${INK}` }}>

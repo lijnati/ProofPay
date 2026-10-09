@@ -9,7 +9,7 @@ const siteUrl = process.env.VERCEL_PROJECT_PRODUCTION_URL
   ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
   : "http://localhost:3000";
 
-const title = "ProofPay — One changed account. One costly mistake.";
+const title = "ProofPay — Verify payment details before money moves";
 const description =
   "ProofPay reads a payment request, checks the payee and account against the supplier records you already trust, and holds the payment when they don’t match.";
 
