@@ -99,6 +99,14 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
 - Note: no verified production URL (`proof-pay.vercel.app` is an unrelated project), so the end card has no URL
 - [ ] **You:** optional voice-over (command in DEMO_SHOTLIST §2), upload to YouTube, add production URL + video link to Devpost/README
 
+## Phase 5: Devpost package (2026-10-10)
+- [x] Links verified without login: production https://proofpay.xylolabs.space (`/`, `/app`, `/suppliers`), GitHub public, YouTube https://youtu.be/jkS8qjCmUzs
+- [x] Production `pnpm smoke`: 6/6 expected verdicts, all live
+- [x] lint, typecheck, 92/92 tests, build; history secret scan clean
+- [x] `submission/DEVPOST_SUBMISSION.md`, `submission/FINAL_CHECKLIST.md`, `submission/assets/` (01–05 captured from production)
+- [x] README: live/video links, try-it steps, verification line, Claude Code disclosure; `site.ts` githubUrl set
+- [ ] **You:** push, then submit on Devpost (steps in FINAL_CHECKLIST.md)
+
 ## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
 - [x] Larger labeled eval suite (25 cases), with results from real runs only

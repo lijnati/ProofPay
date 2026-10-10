@@ -11,11 +11,18 @@ ProofPay is a pre-payment verification console for small businesses. You paste a
 
 | | |
 |---|---|
-| **Live demo** | _add production URL_ (landing page at `/`, verification console at `/app`) |
-| **Demo video** | _add video URL_ |
+| **Live demo** | **https://proofpay.xylolabs.space** (landing page) · [**/app**](https://proofpay.xylolabs.space/app) (verification console) · [/suppliers](https://proofpay.xylolabs.space/suppliers) (trusted records) |
+| **Demo video** | **https://youtu.be/jkS8qjCmUzs** (2:46, real app, live model) |
 | **Evaluation** | [EVALUATION.md](EVALUATION.md) |
 
-![Payment held: the request's IBAN differs from the registered IBAN](submission-assets/screenshots/01-hold-account-substitution.jpg)
+![Payment held on the live site: the request's IBAN differs from the registered IBAN](submission/assets/03-hold-account-mismatch.png)
+
+## Try it in 30 seconds
+
+1. Open **https://proofpay.xylolabs.space/app**. No login needed.
+2. Click the **Changed bank details** sample, then **Verify request**.
+3. After about 10–15 s of live AI extraction: **Payment held**. The request's IBAN `GB33 HRBR…` ≠ the trusted `GB82 WEST…`, quoted from the email, with the payment gate locked.
+4. Try **Routine supplier invoice** (no mismatch) and **Unregistered supplier** (needs human review).
 
 ## The problem
 
@@ -113,6 +120,8 @@ Final live run with `openai/gpt-5-mini`:
 
 The demo set returned 6/6. Median latency is about 13 s.
 
+Re-checked on **2026-10-10**: `pnpm lint` and `pnpm typecheck` clean, `pnpm test` **92/92**, `pnpm build` OK. `pnpm smoke https://proofpay.xylolabs.space` gave the expected verdict for all 6 samples, every one in **live** mode (9.8–12.5 s each).
+
 The first run scored 23/25 with 2 API errors. Three fixes followed, and the failures are documented in **[EVALUATION.md](EVALUATION.md)**. That file also covers the limitations: a small, self-authored synthetic set, and fixes made after seeing results. **These numbers are not a real-world accuracy claim.**
 
 ## Run locally
@@ -143,7 +152,9 @@ eval/            labeled evaluation cases and recorded results
 tests/           vitest suites, including adversarial cases
 ```
 
-Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, AI SDK 7, Vercel AI Gateway, Zod 4, Vitest.
+Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, AI SDK 7, Vercel AI Gateway (`openai/gpt-5-mini`), Zod 4, Vitest. Deployed on Vercel.
+
+**How it was built:** solo, during ForgeHacks 2026, with **Claude Code** as a development assistant (coding, tests, review, demo tooling). Claude is not part of the product. ProofPay's runtime AI is `openai/gpt-5-mini` via the Vercel AI Gateway, and it only performs extraction.
 
 ## Limitations
 
@@ -158,3 +169,7 @@ Stack: Next.js 16 (App Router), React 19, TypeScript, Tailwind CSS 4, AI SDK 7, 
 - Ingest invoices from a shared inbox and PDFs.
 - Record how a supplier's account change was verified (who called whom, when) as a new trusted record.
 - A larger, independently written evaluation set.
+
+---
+
+Built for **ForgeHacks 2026** (AI + Cybersecurity track). Prototype with synthetic data only: no bank integration, no real payments, and no guarantee of fraud prevention.
