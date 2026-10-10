@@ -90,6 +90,15 @@ Internal deadline: **Oct 10 2026, 5:00 PM EAT**. No GitHub; deploy directly to V
 - [x] Screenshots: `submission-assets/landing/L01–L07`
 - Note: reduced-motion behaviour is implemented in CSS but was not emulated in the browser during QA.
 
+## Phase 4: demo video (2026-10-10)
+- [x] Re-verified on a local production build: `pnpm test` 92/92; `pnpm smoke` 6/6 expected verdicts, all **live** (`openai/gpt-5-mini`, 8.7–12.9 s)
+- [x] Recorded real product takes with Playwright + DevTools screencast (landing, trusted records, HOLD, no mismatch, review, injection). Every take was live, none showed "Offline replay".
+- [x] Edited with ffmpeg: `submission-assets/demo/proofpay-demo.mp4`, **2:46**, 1080p30, burned-in captions, labeled speed-ups (2.5×/3×), ambient bed, no voice. Decodes cleanly; key frames checked for legibility.
+- [x] `submission-assets/demo/`: DEMO_SCRIPT.md (timed VO), DEMO_SHOTLIST.md (shots, re-render, VO mix, YouTube kit), `.srt`, thumbnail, `tooling/`
+- Note: neural TTS (edge-tts) returned HTTP 403; only robotic SAPI voices were available, so the cut is captioned instead of synthetically voiced
+- Note: no verified production URL (`proof-pay.vercel.app` is an unrelated project), so the end card has no URL
+- [ ] **You:** optional voice-over (command in DEMO_SHOTLIST §2), upload to YouTube, add production URL + video link to Devpost/README
+
 ## P1 (only after P0 deployed)
 - [ ] Text-based PDF upload (unpdf, in memory)
 - [x] Larger labeled eval suite (25 cases), with results from real runs only

@@ -45,3 +45,6 @@ next-env.d.ts
 DEMO_SCRIPT.md
 DEMO_SHOTLIST.md
 DEVPOST_SUBMISSION.md
+
+# demo video binary (upload to YouTube; keep out of git)
+submission-assets/demo/*.mp4

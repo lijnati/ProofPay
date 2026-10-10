@@ -1,0 +1,140 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&family=Geist+Mono:wght@400;500&display=block" rel="stylesheet">
+<style>
+:root{--paper:#f3f2ee;--paper2:#ebe9e3;--rule:#d6d4cd;--ink:#17181a;--ink2:#45474c;--ink3:#64666c;--graphite:#5b5d63;--cobalt:#2140d4;--hold:#a8322a;--holdsoft:#fbf1ef;--holdline:#ecc9c4;--clear:#2f6f4f;--review:#a0610d}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:1920px;height:1080px;overflow:hidden;background:transparent;font-family:Geist,sans-serif;color:var(--ink);-webkit-font-smoothing:antialiased}
+.card{position:absolute;inset:0;background:var(--paper);display:none;padding:110px 140px}
+.card.on{display:block}
+.kicker{font-family:'Geist Mono',monospace;font-size:20px;letter-spacing:.08em;text-transform:uppercase;color:var(--graphite);display:flex;gap:28px;align-items:center}
+.kicker b{color:var(--cobalt);font-weight:500}
+.rule{position:absolute;left:140px;right:140px;height:1px;background:var(--rule)}
+h1{font-weight:600;letter-spacing:-.035em;line-height:1.02}
+.mono{font-family:'Geist Mono',monospace}
+/* statement */
+#statement h1{font-size:100px;margin-top:170px;max-width:1640px}
+#statement h1 em{font-style:normal;color:var(--hold)}
+#statement .shift{display:inline-block;transform:translateY(10px)}
+/* email */
+#email .wrap{display:grid;grid-template-columns:520px 1fr;gap:90px;margin-top:70px}
+#email h1{font-size:64px}
+#email p.lede{margin-top:34px;font-size:26px;line-height:1.45;color:var(--ink2)}
+.mail{background:#fff;border:1px solid var(--rule);border-radius:14px;padding:38px 44px;font-family:'Geist Mono',monospace;font-size:21px;line-height:1.62;color:var(--ink2);white-space:pre-wrap;box-shadow:0 30px 60px -40px rgba(23,24,26,.35)}
+.mail .hl{background:var(--holdsoft);color:var(--hold);border-radius:4px;padding:1px 4px;margin:0 -4px}
+.mail .big{display:block;background:var(--holdsoft);border-left:4px solid var(--hold);color:var(--hold);font-weight:500;margin:6px -44px;padding:6px 40px}
+.tag{display:inline-block;font-family:'Geist Mono',monospace;font-size:16px;letter-spacing:.06em;text-transform:uppercase;border:1px solid var(--rule);border-radius:999px;padding:6px 14px;color:var(--graphite)}
+/* architecture */
+#arch h1{font-size:62px;margin-top:40px}
+.flow{display:grid;grid-template-columns:repeat(6,1fr);gap:18px;margin-top:80px}
+.step{border-top:3px solid var(--ink);padding-top:22px;min-height:330px;position:relative}
+.step.ai{border-color:var(--cobalt)}
+.step .n{font-family:'Geist Mono',monospace;font-size:18px;color:var(--graphite)}
+.step .t{font-size:30px;font-weight:600;letter-spacing:-.02em;line-height:1.15;margin-top:14px}
+.step .d{font-size:20px;line-height:1.45;color:var(--ink3);margin-top:16px}
+.step .who{position:absolute;bottom:0;font-family:'Geist Mono',monospace;font-size:15px;letter-spacing:.06em;text-transform:uppercase;padding:6px 12px;border-radius:999px;background:var(--ink);color:var(--paper)}
+.step.ai .who{background:var(--cobalt)}
+.step.src .who{background:transparent;color:var(--graphite);border:1px solid var(--rule)}
+.step:not(:last-child)::after{content:"→";position:absolute;right:-16px;top:-20px;font-size:26px;color:var(--graphite)}
+.foot{position:absolute;left:140px;right:140px;bottom:96px;display:flex;justify-content:space-between;font-size:22px;color:var(--ink2)}
+.foot strong{color:var(--ink)}
+/* proof */
+#proof h1{font-size:62px;margin-top:40px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:60px;margin-top:90px}
+.stat{border-top:1px solid var(--ink);padding-top:26px}
+.stat .v{font-size:120px;font-weight:600;letter-spacing:-.05em;line-height:1}
+.stat .v small{font-size:52px;color:var(--graphite);letter-spacing:-.02em}
+.stat .l{font-size:23px;line-height:1.45;color:var(--ink2);margin-top:20px;max-width:440px}
+.note{position:absolute;left:140px;right:140px;bottom:90px;font-size:20px;line-height:1.5;color:var(--graphite);border-top:1px solid var(--rule);padding-top:22px;display:flex;justify-content:space-between;gap:40px}
+/* end */
+#end{background:var(--ink);color:var(--paper)}
+#end .logo{margin-top:250px;height:150px}
+#end .tagline{font-size:64px;font-weight:600;letter-spacing:-.035em;margin-top:60px;line-height:1.1}
+#end .tagline span{display:inline-block;transform:translateY(8px);color:#9fb0ff}
+#end .meta{position:absolute;left:140px;bottom:100px;font-family:'Geist Mono',monospace;font-size:20px;letter-spacing:.06em;text-transform:uppercase;color:#a9aab0}
+#end .rule{background:#34363b}
+/* captions */
+.cap{position:absolute;left:0;right:0;bottom:46px;display:none;justify-content:center}
+.cap.on{display:flex}
+.cap div{max-width:1500px;background:rgba(23,24,26,.88);color:#fff;font-size:32px;line-height:1.38;font-weight:500;letter-spacing:-.01em;padding:16px 30px;border-radius:12px;text-align:center;backdrop-filter:blur(6px)}
+.cap div .m{font-family:'Geist Mono',monospace;font-size:29px;color:#ffb4ab}
+.cap div .ok{font-family:'Geist Mono',monospace;font-size:29px;color:#a8d8bd}
+.badge{position:absolute;top:34px;right:40px;display:none;align-items:center;gap:12px;background:rgba(23,24,26,.86);color:#fff;font-family:'Geist Mono',monospace;font-size:21px;letter-spacing:.04em;padding:11px 18px;border-radius:999px}
+.badge.on{display:flex}
+.badge i{width:11px;height:11px;border-radius:50%;background:#ff5a4a;display:inline-block}
+</style></head><body>
+
+<section class="card" id="statement">
+  <div class="kicker"><b>ProofPay</b><span>Synthetic example · ForgeHacks 2026</span></div>
+  <h1>An invoice can look completely legitimate while hiding one dangerous change: <span class="shift"><em>where the money goes.</em></span></h1>
+</section>
+
+<section class="card" id="email">
+  <div class="kicker"><b>01</b><span>The problem</span></div>
+  <div class="wrap">
+    <div>
+      <h1>Same supplier.<br>Same tone.<br>New account.</h1>
+      <p class="lede">An attacker impersonates a supplier, or takes over their mailbox, and changes one line: the payment destination.</p>
+      <p style="margin-top:34px"><span class="tag">Synthetic demo data · fictional names</span></p>
+    </div>
+<div class="mail">From: Priya Shah &lt;accounts@northwind-packaging<span class="hl">-billing</span>.example&gt;
+Subject: URGENT: Invoice NWP-2026-0419
+
+Following our recent banking migration, <span class="hl">we have
+updated our bank details.</span> Please make all future
+payments to the account below.
+
+Amount due: GBP 18,450.00
+Due: today, to avoid a hold on your next shipment.
+
+Beneficiary: Northwind Packaging Services
+<span class="big">IBAN: GB33 HRBR 6016 1331 9268 19</span>
+We are unable to take calls this week.</div>
+  </div>
+</section>
+
+<section class="card" id="arch">
+  <div class="kicker"><b>04</b><span>How it works</span></div>
+  <h1>AI reads the document. Code makes the decision.</h1>
+  <div class="flow">
+    <div class="step src"><div class="n">01</div><div class="t">Payment request</div><div class="d">Email or invoice text. Untrusted, and may contain injected instructions.</div><div class="who">Input</div></div>
+    <div class="step ai"><div class="n">02</div><div class="t">AI structured extraction</div><div class="d">Payee, account, amount, sender, each with a verbatim quote. No verdict field exists.</div><div class="who">AI · untrusted</div></div>
+    <div class="step"><div class="n">03</div><div class="t">Source evidence grounding</div><div class="d">Every quoted value must appear in the original text, or it counts as missing.</div><div class="who">Code</div></div>
+    <div class="step"><div class="n">04</div><div class="t">Trusted supplier comparison</div><div class="d">Against records verified earlier by call-back. The AI never writes them.</div><div class="who">Code</div></div>
+    <div class="step"><div class="n">05</div><div class="t">Deterministic rules</div><div class="d">Any critical → Hold. Any warning → Review. Otherwise no mismatch found.</div><div class="who">Code</div></div>
+    <div class="step"><div class="n">06</div><div class="t">Evidence report + payment gate</div><div class="d">Findings cite the quote and the record. The gate is simulated.</div><div class="who">Code</div></div>
+  </div>
+  <div class="foot"><span><strong>Untrusted document text cannot authorize a payment.</strong> Injection attempts are detected, not obeyed.</span></div>
+</section>
+
+<section class="card" id="proof">
+  <div class="kicker"><b>05</b><span>Evidence, not claims</span></div>
+  <h1>Tested against models that lie.</h1>
+  <div class="stats">
+    <div class="stat"><div class="v">92<small>/92</small></div><div class="l">automated tests passing, including fake models that invent accounts or obey injected instructions.</div></div>
+    <div class="stat"><div class="v">13<small>/13</small></div><div class="l">critical cases held in a 25-case live evaluation with openai/gpt-5-mini.</div></div>
+    <div class="stat"><div class="v">0<small> of 6</small></div><div class="l">legitimate invoices held. No suspicious case passed.</div></div>
+  </div>
+  <div class="note"><span>Synthetic, self-written evaluation set. Not a measure of real-world accuracy.</span><span>No bank integration · no real payments · no account-ownership checks</span></div>
+</section>
+
+<section class="card" id="end">
+  <div class="kicker" style="color:#a9aab0"><b style="color:#9fb0ff">ProofPay</b><span>AI + Cybersecurity</span></div>
+  <img class="logo" src="LOGO_REV">
+  <div class="tagline">Know what you're paying. <span>Before you pay.</span></div>
+  <div class="meta">ForgeHacks 2026 · Prototype · Synthetic data · No real payments</div>
+</section>
+
+<div class="cap" id="cap"><div id="captext"></div></div>
+<div class="badge" id="badge"><i></i><span id="badgetext"></span></div>
+
+<script>
+window.show = (id) => { document.getElementById('cap').classList.remove('on'); document.getElementById('badge').classList.remove('on'); document.querySelectorAll('.card').forEach(c => c.classList.toggle('on', c.id === id)); };
+window.caption = (html) => { document.querySelectorAll('.card').forEach(c => c.classList.remove('on'));
+  document.getElementById('badge').classList.remove('on');
+  document.getElementById('captext').innerHTML = html; document.getElementById('cap').classList.add('on'); };
+window.badge = (txt) => { document.querySelectorAll('.card').forEach(c => c.classList.remove('on'));
+  document.getElementById('cap').classList.remove('on');
+  document.getElementById('badgetext').textContent = txt; document.getElementById('badge').classList.add('on'); };
+</script>
+</body></html>

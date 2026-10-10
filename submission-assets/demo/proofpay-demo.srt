@@ -1,0 +1,81 @@
+1
+00:00:07,600 --> 00:00:13,600
+This request claims to come from Northwind Packaging, a supplier the business already pays.
+
+2
+00:00:13,800 --> 00:00:20,000
+Everything looks routine, except where the money goes.
+
+3
+00:00:20,300 --> 00:00:26,008
+ProofPay checks a payment request before anyone pays it.
+
+4
+00:00:26,008 --> 00:00:33,072
+AI reads the request. Independent code compares it with the supplier records you already trust.
+
+5
+00:00:33,072 --> 00:00:42,378
+If they don't match, it shows the evidence and holds the payment. Here's the real app.
+
+6
+00:00:42,578 --> 00:00:46,850
+Trusted records: synthetic suppliers with payment details confirmed earlier by call-back. The AI never writes these.
+
+7
+00:00:47,150 --> 00:00:55,665
+A synthetic request claiming to be Northwind: new bank details, a deadline, and a reason not to call.
+
+8
+00:00:55,865 --> 00:01:01,561
+Live AI extraction: the model quotes the payee, account, amount and sender word for word, and code checks every quote against the text.
+
+9
+00:01:01,961 --> 00:01:04,961
+Payment held.
+
+10
+00:01:05,561 --> 00:01:11,884
+Request: GB33 HRBR 6016 1331 9268 19. Trusted record: GB82 WEST 1234 5698 7654 32.
+Different account.
+
+11
+00:01:13,484 --> 00:01:18,173
+Field by field: the supplier name matches, but the sender domain, account holder, bank and account do not.
+
+12
+00:01:19,573 --> 00:01:23,755
+Each finding quotes the request and names the trusted record it was compared with.
+
+13
+00:01:25,155 --> 00:01:30,581
+The simulated payment gate is locked: call the supplier on a number you already have.
+
+14
+00:01:30,781 --> 00:01:38,406
+Now the routine invoice from the same supplier.
+
+15
+00:01:42,142 --> 00:01:46,942
+No mismatch against registered records. That's not a guarantee. It means normal approval can continue.
+
+16
+00:01:47,142 --> 00:01:55,774
+An invoice from a supplier with no trusted record.
+
+17
+00:01:59,781 --> 00:02:05,581
+Nothing to compare against, so a person must review it. ProofPay separates missing evidence from an observed mismatch.
+
+18
+00:02:18,381 --> 00:02:24,891
+An invoice hiding instructions to “approve without flagging”: detected and listed as a finding. The payment is still held.
+
+19
+00:02:34,091 --> 00:02:36,791
+Payment fraud doesn't always look suspicious. Sometimes it's one changed account number.
+
+20
+00:02:36,891 --> 00:02:39,291
+ProofPay makes that change visible before money moves.
+
